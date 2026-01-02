@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gray-900: #202225;
+  --color-gray-800: #2f3136;
+  --color-gray-700: #36393f;
+  --color-gray-600: #4f545c;
+  --color-gray-400: #d4d7dc;
+  --color-gray-300: #e3e5e8;
+  --color-gray-200: #ebedef;
+  --color-gray-100: #f2f3f5;
+  --color-primary: #5865f2;
+
+  --color-custom-dark: #ff3737;
+  --color-custom-orange: #e35e25;
+  --color-custom-blue: #2c7be5;
+  --color-custom-bluehover: #DCE8FE;
+  --color-custom-bluehover2: #006dff;
+  --color-custom-blue-bg: #f9fbff;
+  --color-custom-red: #ff0707;
+
+
+  --animate-slide-shake: slide-shake 1s ease-out;
+
+  @keyframes slide-shake {
+      0%,
+      100% {
+          transform: rotate(0deg) translateX(0);
+      }
+      25% {
+          transform: rotate(10deg) translateX(-3px);
+      }
+      50% {
+          transform: rotate(0deg) translateX(3px);
+      }
+      75% {
+          transform: rotate(-10deg) translateX(-3px);
+      }
+    }
+
+    --animate-slide-profile: slide-profile 1s ease-out;
+
+     @keyframes slide-profile {
+      0%,
+      100% {
+          transform: rotate(0deg) ;
+      }
+      25% {
+          transform: rotate(10deg) ;
+      }
+      50% {
+          transform: rotate(-10deg);
+      }
+      75% {
+          transform: rotate(0deg);
+      }
+    }
+
+  --animate-slide-down: slide-down 1s ease-out;
+
+  @keyframes slide-down {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  --animate-slide-up: slide-up 1s ease-out;
+
+  @keyframes slide-up {
+    from {
+      transform: translateY(0);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(-100%);
+      opacity: 1;
+    }
+  }
+  --animate-fade-in-scale: fade-in-scale 1s ease-out;
+
+  @keyframes fade-in-scale {
+    0% {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  --animate-fade-in: fade-in 1s ease-out;
+
+  --font-weight-bold: 700;
+
+
+}
+.MuiDrawer-paper {
+  margin-top: 120px;
+}
