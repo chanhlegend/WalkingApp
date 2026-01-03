@@ -11,8 +11,14 @@ const cors = require('cors');
 // Load biến môi trường
 dotenv.config();
 
-// Kết nối DB
-db.connect();
+async function bootstrap() {
+  // Kết nối DB
+  try {
+    await db.connect();
+  } catch (error) {
+    console.error('MongoDB connection failed. Server will not start.');
+    process.exit(1);
+  }
 
 
 // Middleware
@@ -42,11 +48,14 @@ app.set('transporter', mailer);
 // Khởi tạo routes
 route(app);
 
-// Port
-const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Ứng dụng đang chạy trên cổng ${PORT}`);
-});
+  // Port
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Ứng dụng đang chạy trên cổng ${PORT}`);
+  });
+}
+
+bootstrap();
 
 // Cấu hình CORS
 // app.use(cors({

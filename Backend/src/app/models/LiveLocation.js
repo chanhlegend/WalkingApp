@@ -9,7 +9,7 @@ const LiveLocationSchema = new mongoose.Schema(
     lng: { type: Number, required: true },
     accuracyM: { type: Number, min: 0 },
     timestamp: { type: Date, required: true, index: true },
-    expiresAt: { type: Date, required: true, index: true },
+    expiresAt: { type: Date, required: true },
   },
   withBaseSchemaOptions({ collection: 'live_locations' })
 );
