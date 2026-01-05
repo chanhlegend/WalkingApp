@@ -1,15 +1,18 @@
 const mongoose = require('mongoose');
-const { withBaseSchemaOptions } = require('./_shared');
+
 
 const PlanSchema = new mongoose.Schema(
   {
+    userId : { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+
     name: { type: String, required: true, trim: true, unique: true },
-    priceVnd: { type: Number, required: true, min: 0 },
-    interval: { type: String, required: true, enum: ['monthly', 'yearly'] },
-    features: { type: mongoose.Schema.Types.Mixed, default: {} },
-    active: { type: Boolean, default: true, index: true },
+    interval: { type: String, required: true, enum: ['weekly' , 'monthly' ,'yearly' ] },
+    startDate : { type: Date, required: true, index: true },
+    endDate : { type: Date, required: true, index: true },
+    status : { type: String, enum: ['active' , 'completed', 'pending' ], default: 'active', index: true },
+    totalDistance : { type: Number, min: 0 },
   },
-  withBaseSchemaOptions({ collection: 'plans' })
+  { timestamps: true }
 );
 
 module.exports = mongoose.model('Plan', PlanSchema);

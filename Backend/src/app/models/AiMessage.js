@@ -1,18 +1,17 @@
 const mongoose = require('mongoose');
-const { withBaseSchemaOptions, objectIdRef } = require('./_shared');
 
-const AiMessageSchema = new mongoose.Schema(
+
+const NotificationSchema = new mongoose.Schema(
   {
-    conversationId: objectIdRef('AiConversation'),
-    role: { type: String, required: true, enum: ['user', 'assistant', 'system'] },
-    content: { type: mongoose.Schema.Types.Mixed, required: true },
-    tokensIn: { type: Number, default: 0, min: 0 },
-    tokensOut: { type: Number, default: 0, min: 0 },
-    costVnd: { type: Number, default: 0, min: 0 },
+    userId: mongoose.Schema.Types.ObjectId('User'),
+    message: { type: String, required: true, index: true },
+    sender: {type : String, enum : ['ai_bot' , 'user'], required: true, index: true },
+    sentAt: { type: Date, default: Date.now, index: true, },
+   
   },
-  withBaseSchemaOptions({ collection: 'ai_messages' })
+  { timestamps: true }
 );
 
-AiMessageSchema.index({ conversationId: 1, createdAt: 1 });
 
-module.exports = mongoose.model('AiMessage', AiMessageSchema);
+
+module.exports = mongoose.model('Notification', NotificationSchema);
