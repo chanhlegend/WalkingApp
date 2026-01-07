@@ -19,6 +19,12 @@ async function connect() {
             socketTimeoutMS: 45000,
         });
         console.log('Connected to MongoDB successfully');
+        try {
+            const { host, name, port } = mongoose.connection;
+            console.log(`MongoDB connection details: host=${host}${port ? `:${port}` : ''} db=${name}`);
+        } catch (e) {
+            // ignore logging errors
+        }
         return mongoose.connection;
     } catch (error) {
         console.error('Failed to connect to MongoDB:', error.message);

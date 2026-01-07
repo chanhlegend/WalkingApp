@@ -3,14 +3,16 @@ const mongoose = require('mongoose');
 const UserSchema = new mongoose.Schema(
 	{
 		email: { type: String, unique: true },
-		fullName: { type: String, required: true },
-		passWorldHash: { type: String, required: true },
+		googleId: { type: String, index: true , unique: true, sparse: true },
+		fullName: { type: String, default: '' },
+		passWorldHash: { type: String, default: null },
 		avatarUrl: String,
 		role: { type: String, default: 'USER' },
-		gender: { type: String, enum: ['male', '	female', 'other'] },
+		gender: { type: String, enum: ['male', 'female', 'other'] },
 		tall : Number,
 		weight: Number,
 		active: { type: Boolean, default: true },
+		onboardingCompleted: { type: Boolean, default: false },
 		
 
 		experiencePoints: { type: String },

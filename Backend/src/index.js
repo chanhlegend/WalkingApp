@@ -41,9 +41,9 @@ const mailer = require('./config/mailer/mailer');
 app.set('transporter', mailer);
 
 // Passport
-// const passport = require('./config/passport/passport-config');
-// app.use(passport.initialize());
-// app.use(passport.session());
+const passport = require('./config/passport/passport-config');
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Khởi tạo routes
 route(app);

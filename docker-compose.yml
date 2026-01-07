@@ -14,7 +14,7 @@ services:
       - ./Backend/.env
     environment:
       PORT: "3000"
-      MONGO_URI: mongodb://mongo:27017/walkingapp
+      MONGO_URI: mongodb+srv://walkingappexe:WRShKGdRhqvnTTOC@walkingapp.yhmrizi.mongodb.net/?retryWrites=true&w=majority&appName=walkingapp
     depends_on:
       - mongo
     ports:
