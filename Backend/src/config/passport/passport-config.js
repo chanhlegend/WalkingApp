@@ -1,56 +1,70 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const mongoose = require("mongoose");
-const User = require("../../app/models/User"); // Đường dẫn đến User model của bạn
-require("dotenv").config({ path: "./src/.env" });
+const User = require("../../app/models/User");
 
+// Google OAuth Strategy
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      callbackURL: "/api/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        // Tìm hoặc tạo user mới dựa trên Google ID hoặc email
-        let user = await User.findOne({ email: profile.emails[0].value });
-        if (user) {
-          // Cập nhật thông tin nếu người dùng đã tồn tại
-          user.fullName = user.fullName || profile.displayName;
-          user.avatar = user.avatar || profile.photos[0].value;
-          user.status = "active"; // Cập nhật trạng thái khi đăng nhập thành công
-          await user.save();
-        } else {
-          // Tạo người dùng mới
-          user = new User({
-            email: profile.emails[0].value,
-            fullName: profile.displayName || "Người dùng mới",
-            avatar: profile.photos[0].value || "/img/dafaultAvatar.jpg",
-            password: "google-oauth-" + profile.id, // Password giả để thỏa mãn schema
-            status: "active",
-          });
-          await user.save();
+        const email = (profile.emails?.[0]?.value || "").toLowerCase();
+        const googleId = profile.id;
+        const avatarUrl = profile.photos?.[0]?.value || "";
+
+        // 1) find by googleId
+        let user = await User.findOne({ googleId });
+
+        // 2) if not found, find by email (to avoid duplicate accounts)
+        if (!user && email) {
+          user = await User.findOne({ email });
         }
+
+        // 3) create if not exists
+        if (!user) {
+          user = await User.create({
+            email,
+            googleId,
+            avatarUrl,
+            active: true,
+            onboardingCompleted: false,
+          });
+        } else {
+          // 4) update missing fields
+          let changed = false;
+          if (!user.googleId) {
+            user.googleId = googleId;
+            changed = true;
+          }
+          if (!user.avatarUrl && avatarUrl) {
+            user.avatarUrl = avatarUrl;
+            changed = true;
+          }
+          if (changed) await user.save();
+        }
+
         return done(null, user);
       } catch (err) {
-        return done(err, null);
+        return done(err);
       }
     }
   )
 );
 
-// Serialize và deserialize user
 passport.serializeUser((user, done) => {
-  done(null, user._id); // Lưu _id của user vào session
+  done(null, String(user._id));
 });
 
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);
-    done(null, user);
+    done(null, user || false);
   } catch (err) {
-    done(err, null);
+    done(err);
   }
 });
 
