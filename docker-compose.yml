@@ -1,32 +1,54 @@
 services:
-  mongo:
-    image: mongo:7
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-
   backend:
-    build: ./Backend
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: walkingapp-backend
     restart: unless-stopped
     env_file:
       - ./Backend/.env
     environment:
+      NODE_ENV: "development"
       PORT: "3000"
-      MONGO_URI: mongodb+srv://walkingappexe:WRShKGdRhqvnTTOC@walkingapp.yhmrizi.mongodb.net/?retryWrites=true&w=majority&appName=walkingapp
-    depends_on:
-      - mongo
+
+      # ✅ MongoDB Atlas (SRV) - format đúng
+      # Lưu ý: nếu password có ký tự đặc biệt (@ : / ? # % &), bạn phải URL-encode.
+      # Ví dụ: p@ss:word -> p%40ss%3Aword
+      MONGO_URI: "mongodb+srv://walkingappexe:WRShKGdRhqvnTTOC@walkingapp.yhmrizi.mongodb.net/?retryWrites=true&w=majority&appName=walkingapp"
+
     ports:
       - "3000:3000"
+    volumes:
+      - ./Backend:/app
+      - backend-node-modules:/app/node_modules
+    working_dir: /app
+    command: npm run dev
+    stdin_open: true
+    tty: true
 
   frontend:
-    build: ./Frontend
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: walkingapp-frontend
     restart: unless-stopped
     depends_on:
       - backend
     ports:
-      - "5173:80"
+      - "5173:5173"
+    volumes:
+      - ./Frontend:/app
+      - frontend-node-modules:/app/node_modules
+    working_dir: /app
+    environment:
+      NODE_ENV: "development"
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+      VITE_API_URL: "http://localhost:3000"
+    command: npm run dev -- --host 0.0.0.0 --port 5173 --strictPort
+    stdin_open: true
+    tty: true
 
 volumes:
-  mongo-data:
+  backend-node-modules:
+  frontend-node-modules:

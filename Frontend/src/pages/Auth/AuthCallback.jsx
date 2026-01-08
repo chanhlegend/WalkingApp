@@ -37,12 +37,17 @@ export default function AuthCallback() {
             })
           );
         } catch (err) {
-          void err;
+          console.error("AuthCallback error:", err);
+          if (!cancelled) setError(err?.message || "Authentication failed");
         }
 
         // clean URL
         try {
-          window.history.replaceState({}, document.title, window.location.pathname);
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname
+          );
         } catch (err) {
           void err;
         }
