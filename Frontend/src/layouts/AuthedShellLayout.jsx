@@ -68,11 +68,19 @@ export default function AuthedShellLayout({ children }) {
           </div>
 
           <div className="app-topRight">
-            <button className="app-logout" type="button" onClick={() => AuthService.logout()}>
+            <button
+              className="app-logout"
+              type="button"
+              onClick={() => AuthService.logout()}
+            >
               Logout
             </button>
 
-            <button className="app-bell" type="button" aria-label="Notifications">
+            <button
+              className="app-bell"
+              type="button"
+              aria-label="Notifications"
+            >
               <FiBell />
               <span className="app-badge" aria-hidden="true">
                 1
@@ -86,7 +94,9 @@ export default function AuthedShellLayout({ children }) {
 
       <nav className="app-footer" aria-label="Bottom navigation">
         <button
-          className={active === "home" ? "app-navBtn app-navBtn--active" : "app-navBtn"}
+          className={
+            active === "home" ? "app-navBtn app-navBtn--active" : "app-navBtn"
+          }
           type="button"
           aria-label="Home"
           onClick={() => navigate(ROUTE_PATH.HOME)}
@@ -96,7 +106,12 @@ export default function AuthedShellLayout({ children }) {
         <button className="app-navBtn" type="button" aria-label="Search">
           <FiSearch />
         </button>
-        <button className="app-navBtn" type="button" aria-label="Camera">
+        <button
+          className="app-navBtn"
+          type="button"
+          aria-label="Camera"
+          onClick={() => navigate(ROUTE_PATH.NEW_RUN)}
+        >
           <FiCamera />
         </button>
         <button className="app-navBtn" type="button" aria-label="Stats">
