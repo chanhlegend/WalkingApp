@@ -20,6 +20,10 @@ const ROUTE_PATH = {
 	ONBOARDING_STEP_7: "/onboarding/7",
 	ONBOARDING_STEP_8: "/onboarding/8",
 	ONBOARDING_DONE: "/onboarding/done",
+
+	//Running
+	NEW_RUN: "/running/new",
+	OUTDOOR_RUN: "/running/outdoor",
 };
 
 export default ROUTE_PATH;

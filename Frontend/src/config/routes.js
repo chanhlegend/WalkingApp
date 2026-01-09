@@ -16,7 +16,12 @@ import Step6Regularity from "../pages/Onboarding/Step6Regularity";
 import Step7Goal from "../pages/Onboarding/Step7Goal";
 import Step8Training from "../pages/Onboarding/Step8Training";
 import OnboardingDone from "../pages/Onboarding/Done";
-import Home from "../pages/Home/Home";
+import Home from "../pages/Site/Home";
+
+//Running
+import NewRun from "../pages/Running/NewRun";
+import OutdoorRun from "../pages/Running/OutdoorRun";
+
 import ROUTE_PATH from "../constants/routePath";
 
 
@@ -41,6 +46,10 @@ const AppRoutes = [
 	{ path: ROUTE_PATH.ONBOARDING_STEP_7, page: Step7Goal, layout: RequireAuthLayout },
 	{ path: ROUTE_PATH.ONBOARDING_STEP_8, page: Step8Training, layout: RequireAuthLayout },
 	{ path: ROUTE_PATH.ONBOARDING_DONE, page: OnboardingDone, layout: RequireAuthLayout },
+
+	//Running
+	{ path: ROUTE_PATH.NEW_RUN, page: NewRun, layout: AuthedShellLayout },
+	{ path: ROUTE_PATH.OUTDOOR_RUN, page: OutdoorRun, layout: AuthedShellLayout },
 ]
 
 export { AppRoutes };
