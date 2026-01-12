@@ -24,6 +24,9 @@ const ROUTE_PATH = {
 	//Running
 	NEW_RUN: "/running/new",
 	OUTDOOR_RUN: "/running/outdoor",
+
+	// Settings
+	SETTING_RUNNING: "/settings/running",
 };
 
 export default ROUTE_PATH;

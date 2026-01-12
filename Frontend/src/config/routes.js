@@ -22,6 +22,8 @@ import Home from "../pages/Site/Home";
 import NewRun from "../pages/Running/NewRun";
 import OutdoorRun from "../pages/Running/OutdoorRun";
 
+import SettingRunning from "../pages/Setting/SettingRunning";
+
 import ROUTE_PATH from "../constants/routePath";
 
 
@@ -50,6 +52,9 @@ const AppRoutes = [
 	//Running
 	{ path: ROUTE_PATH.NEW_RUN, page: NewRun, layout: AuthedShellLayout },
 	{ path: ROUTE_PATH.OUTDOOR_RUN, page: OutdoorRun, layout: AuthedShellLayout },
+
+	// Settings
+	{ path: ROUTE_PATH.SETTING_RUNNING, page: SettingRunning, layout: AuthedShellLayout },
 ]
 
 export { AppRoutes };
