@@ -6,6 +6,7 @@ import {
   FiCamera,
   FiHome,
   FiSearch,
+  FiSettings,
   FiUser,
 } from "react-icons/fi";
 import ROUTE_PATH from "../constants/routePath";
@@ -103,8 +104,13 @@ export default function AuthedShellLayout({ children }) {
         >
           <FiHome />
         </button>
-        <button className="app-navBtn" type="button" aria-label="Search">
-          <FiSearch />
+        <button
+          className="app-navBtn"
+          type="button"
+          aria-label="Search"
+          onClick={() => navigate(ROUTE_PATH.SETTING_RUNNING)}
+        >
+          <FiSettings />
         </button>
         <button
           className="app-navBtn"

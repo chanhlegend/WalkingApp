@@ -9,6 +9,8 @@ import {
 import L from "leaflet";
 import ROUTE_PATH from "../../constants/routePath";
 import { useNavigate } from "react-router-dom";
+import planService from "../../services/planService";
+import runProcessService from "../../services/runProcessService";
 
 // Leaflet icons (Vite/CRA)
 import marker2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -21,6 +23,15 @@ L.Icon.Default.mergeOptions({
   iconUrl: marker1x,
   shadowUrl: markerShadow,
 });
+
+/* ---------------------- Date helpers (local date) ---------------------- */
+function toYYYYMMDDLocal(d = new Date()) {
+  // local yyyy-mm-dd để match "ngày hôm nay" theo timezone của user
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 /* ---------------------- Map Helpers ---------------------- */
 
@@ -79,10 +90,11 @@ function haversineMeters(a, b) {
   if (!a || !b) return 0;
   const R = 6371000;
   const toRad = (x) => (x * Math.PI) / 180;
+
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
   const lat1 = toRad(a.lat);
-  const lat2 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
 
   const s =
     Math.sin(dLat / 2) ** 2 +
@@ -93,9 +105,11 @@ function haversineMeters(a, b) {
 
 function formatTime(ms) {
   const totalSec = Math.floor(ms / 1000);
+  const hh = String(Math.floor(totalSec / 3600)).padStart(2, "0");
   const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
   const ss = String(totalSec % 60).padStart(2, "0");
-  return `${mm}:${ss}`;
+  // hiển thị hh:mm:ss cho chạy dài
+  return hh !== "00" ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
 function formatPace(ms, km) {
@@ -106,12 +120,7 @@ function formatPace(ms, km) {
   return `${mm}:${ss}/km`;
 }
 
-function clamp01(x) {
-  return Math.max(0, Math.min(1, x));
-}
-
 /* ---------------------- UI Blocks ---------------------- */
-
 
 function StatCard({ icon, title, value, suffix, tone = "slate" }) {
   const toneCls =
@@ -147,11 +156,44 @@ function StatCard({ icon, title, value, suffix, tone = "slate" }) {
   );
 }
 
-/**
- * ✅ Non-blocking modal (toast style)
- * - pointer-events-none để không chặn thao tác (timer + GPS vẫn chạy bình thường)
- * - chỉ có nút Close (pointer-events-auto) để tắt
- */
+function DistanceCard({ distanceKm }) {
+  return (
+    <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-3 text-sm font-semibold text-black/55">
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
+          📍
+        </span>
+        <span>Distance</span>
+      </div>
+
+      <div className="mt-4 flex items-end gap-2">
+        <div className="text-4xl font-extrabold text-black">
+          {distanceKm.toFixed(2)}
+        </div>
+        <div className="pb-1 text-sm font-semibold text-black/60">km</div>
+      </div>
+    </div>
+  );
+}
+
+function TimeCard({ elapsedMs }) {
+  return (
+    <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-3 text-sm font-semibold text-black/55">
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-black/5">
+          🕒
+        </span>
+        <span>Time</span>
+      </div>
+
+      <div className="mt-4 text-4xl font-extrabold text-black tracking-wider">
+        {formatTime(elapsedMs)}
+      </div>
+    </div>
+  );
+}
+
+/** Toast chúc mừng (non-blocking) */
 function CongratsToast({ open, title, desc, onClose }) {
   if (!open) return null;
   return (
@@ -180,86 +222,99 @@ function CongratsToast({ open, title, desc, onClose }) {
   );
 }
 
-function DistanceGoalCard({ distanceKm, targetKm = 10 }) {
-  const pct = Math.max(0, Math.min(1, distanceKm / targetKm));
-  const size = 74;
-  const stroke = 8;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const dash = c * pct;
-  const gap = c - dash;
+/* ---------------------- Goal Progress (color levels) ---------------------- */
 
-  return (
-    <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
-  {/* TITLE ON TOP */}
-  <div className="mb-3 text-sm font-semibold text-black/55">
-    Distance goal
-  </div>
-
-  <div className="flex items-center gap-4">
-    {/* ring */}
-    <div className="relative">
-      {/* green dot */}
-      <div className="absolute left-1/2 top-0 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-emerald-500" />
-
-      <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="rgba(0,0,0,0.08)"
-          strokeWidth={stroke}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="rgba(34,197,94,0.95)"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={`${dash} ${gap}`}
-        />
-      </svg>
-
-      <div className="absolute inset-0 grid place-items-center text-center">
-        <div className="text-xl font-extrabold text-black leading-none">
-          {distanceKm.toFixed(2)}
-        </div>
-        <div className="mt-1 text-[11px] font-semibold text-black/45">
-          km / {targetKm}km
-        </div>
-      </div>
-    </div>
-
-    {/* RIGHT VALUE */}
-    <div className="min-w-0">
-      <div className="text-lg font-extrabold text-black">
-        {distanceKm.toFixed(2)}
-      </div>
-      <div className="text-sm font-semibold text-black/45">
-        km / {targetKm}km
-      </div>
-    </div>
-  </div>
-</div>
-
-  );
+function progressStyle(ratio) {
+  if (ratio >= 1) {
+    // 🌈 rainbow
+    return {
+      track: "bg-white/15",
+      fillClass: "",
+      fillStyle: {
+        background:
+          "linear-gradient(90deg,#ff0000,#ff7a00,#ffd400,#00c853,#00b0ff,#3f51b5,#9c27b0)",
+      },
+      label: "🎉 Bạn đã hoàn thành mục tiêu hôm nay",
+      labelClass: "text-emerald-200",
+    };
+  }
+  if (ratio < 0.3) {
+    return {
+      track: "bg-white/15",
+      fillClass: "bg-rose-400",
+      fillStyle: undefined,
+      label: "Cố lên! Bạn đang ở giai đoạn khởi động",
+      labelClass: "text-rose-200",
+    };
+  }
+  if (ratio < 0.7) {
+    return {
+      track: "bg-white/15",
+      fillClass: "bg-amber-300",
+      fillStyle: undefined,
+      label: "Tốt rồi! Sắp đạt mục tiêu",
+      labelClass: "text-amber-200",
+    };
+  }
+  // < 100%
+  return {
+    track: "bg-white/15",
+    fillClass: "bg-emerald-400",
+    fillStyle: undefined,
+    label: "Gần xong rồi! Tiếp tục nhé",
+    labelClass: "text-emerald-200",
+  };
 }
 
-function TimeCard({ elapsedMs }) {
-  return (
-    <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-3 text-sm font-semibold text-black/55">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-black/5">
-          🕒
-        </span>
-        <span>Time</span>
-      </div>
+/**
+ * Goal bar:
+ * - progress = (todayTotalKm + currentRunKm) / targetKm
+ * - đổi màu theo ratio
+ * - khi >= 100% -> rainbow + label "Bạn đã hoàn thành..."
+ */
+function GoalProgressBar({ totalDoneKm, targetKm, loading }) {
+  const ratio =
+    targetKm > 0 ? Math.max(0, Math.min(1.5, totalDoneKm / targetKm)) : 0; // allow >1 for display
+  const pct = Math.min(100, Math.round(ratio * 100 * 10) / 10); // 1 decimal
+  const style = progressStyle(ratio);
 
-      <div className="mt-4 text-4xl font-extrabold text-black tracking-wider">
-        {formatTime(elapsedMs)}
+  return (
+    <div className="mx-auto w-full max-w-[460px]">
+      <div className="rounded-2xl bg-black/40 px-4 py-3 backdrop-blur-md ring-1 ring-white/15">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-extrabold text-white">Today goal</div>
+          <div className="text-xs font-semibold text-white/80">
+            {loading
+              ? "Loading…"
+              : `${totalDoneKm.toFixed(2)} / ${targetKm} km • ${Math.min(
+                  100,
+                  pct
+                )}%`}
+          </div>
+        </div>
+
+        <div
+          className={[
+            "mt-2 h-2 w-full overflow-hidden rounded-full",
+            style.track,
+          ].join(" ")}
+        >
+          <div
+            className={["h-full rounded-full", style.fillClass].join(" ")}
+            style={{
+              width: `${Math.min(100, ratio * 100)}%`,
+              ...(style.fillStyle || {}),
+            }}
+          />
+        </div>
+
+        <div
+          className={["mt-1 text-[11px] font-semibold", style.labelClass].join(
+            " "
+          )}
+        >
+          {ratio >= 1 ? "🎉 Bạn đã hoàn thành mục tiêu hôm nay" : style.label}
+        </div>
       </div>
     </div>
   );
@@ -268,7 +323,13 @@ function TimeCard({ elapsedMs }) {
 /* ---------------------- Main ---------------------- */
 
 export default function OutdoorRun() {
-  const targetKm = 10;
+  // Goal from DB
+  const [targetKm, setTargetKm] = useState(10);
+  const [goalLoading, setGoalLoading] = useState(true);
+
+  // Today run processes (sum)
+  const [todayTotalKm, setTodayTotalKm] = useState(0);
+  const [todayRunsLoading, setTodayRunsLoading] = useState(true);
 
   // GPS
   const [pos, setPos] = useState(null);
@@ -279,7 +340,7 @@ export default function OutdoorRun() {
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
 
-  // Distance
+  // Distance (current run)
   const [distanceM, setDistanceM] = useState(0);
 
   // Fake HR
@@ -292,9 +353,76 @@ export default function OutdoorRun() {
   const [showCongrats, setShowCongrats] = useState(false);
   const didShowCongratsRef = useRef(false);
 
+  // Save state
+  const [savingRun, setSavingRun] = useState(false);
+
   const navigate = useNavigate();
 
-  // Timer interval (✅ không phụ thuộc modal)
+  const distanceKm = distanceM / 1000;
+
+  // ✅ total progress = todayTotal + current run
+  const totalDoneKm = todayTotalKm + distanceKm;
+  const completed = targetKm > 0 && totalDoneKm >= targetKm;
+
+  // ✅ load target + today runs on mount
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      const today = toYYYYMMDDLocal(new Date());
+
+      try {
+        setGoalLoading(true);
+        const res = await planService.getPlansByDate(today);
+        if (!mounted) return;
+
+        const daily = res?.data?.daily;
+        const km = Number(daily?.totalDistance);
+        if (res?.success && Number.isFinite(km) && km > 0) setTargetKm(km);
+        else setTargetKm(10);
+      } catch (e) {
+        console.log(e);
+        if (mounted) setTargetKm(10);
+      } finally {
+        if (mounted) setGoalLoading(false);
+      }
+
+      try {
+        setTodayRunsLoading(true);
+        const rp = await runProcessService.getRunProcessesByDate(today);
+        if (!mounted) return;
+
+        if (!rp?.success || !Array.isArray(rp?.data)) {
+          setTodayTotalKm(0);
+        } else {
+          // sum distance from runs
+          const sum = rp.data.reduce((acc, item) => {
+            // hỗ trợ nhiều field name khác nhau:
+            const v =
+              item?.distanceKm ??
+              item?.totalDistance ??
+              item?.distance ??
+              item?.distance_km ??
+              0;
+            const n = Number(v);
+            return acc + (Number.isFinite(n) ? n : 0);
+          }, 0);
+          setTodayTotalKm(sum);
+        }
+      } catch (e) {
+        console.log(e);
+        if (mounted) setTodayTotalKm(0);
+      } finally {
+        if (mounted) setTodayRunsLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Timer tick
   useEffect(() => {
     if (isPaused) return;
     if (mode !== "running") return;
@@ -302,7 +430,7 @@ export default function OutdoorRun() {
     return () => clearInterval(id);
   }, [isPaused, mode]);
 
-  // Geolocation watch (✅ không phụ thuộc modal)
+  // Geolocation watch
   useEffect(() => {
     if (mode !== "running") return;
 
@@ -386,17 +514,13 @@ export default function OutdoorRun() {
     return () => clearInterval(id);
   }, []);
 
-  const distanceKm = distanceM / 1000;
-  const completed = distanceKm >= targetKm;
-
-  // ✅ show congrats once, but DO NOT pause/stop anything
+  // Congrats when completed (once)
   useEffect(() => {
     if (!completed) return;
     if (didShowCongratsRef.current) return;
     didShowCongratsRef.current = true;
     setShowCongrats(true);
 
-    // auto hide after 4s (optional)
     const t = setTimeout(() => setShowCongrats(false), 4000);
     return () => clearTimeout(t);
   }, [completed]);
@@ -410,11 +534,11 @@ export default function OutdoorRun() {
     () => formatPace(elapsedMs, distanceKm),
     [elapsedMs, distanceKm]
   );
+
   const polylinePositions = useMemo(
     () => path.map((p) => [p.lat, p.lng]),
     [path]
   );
-
 
   const stopTracking = () => {
     if (watchIdRef.current != null) {
@@ -423,19 +547,56 @@ export default function OutdoorRun() {
     }
   };
 
-  const onFinish = () => {
-    setIsPaused(true);
-    stopTracking();
-    setMode("summary");
+  // ✅ FINISH = stop + save to DB + go summary
+  const onFinish = async () => {
+    if (savingRun) return;
+    setSavingRun(true);
+
+    try {
+      setIsPaused(true);
+      stopTracking();
+
+      const startedAt = startedAtRef.current || new Date();
+      const durationSec = Math.max(0, Math.floor(elapsedMs / 1000));
+      const payload = {
+        startedAt,
+        distance: Number(distanceKm.toFixed(3)), // km
+        timeElapsed: durationSec, // seconds
+        avg_heartRate: avgHr,
+        caloriesBurned: Math.round(distanceKm * 60), // optional
+      };
+
+      const res = await runProcessService.createRunProcess(payload);
+
+      if (!res?.success) {
+        // vẫn cho qua summary, nhưng báo lỗi lưu
+        console.log("Save run failed:", res?.message);
+        alert(res?.message || "Lưu run thất bại");
+      } else {
+        // update todayTotalKm ngay lập tức để goal bar / home hiển thị đúng
+        setTodayTotalKm((v) => v + distanceKm);
+      }
+    } catch (e) {
+      console.log(e);
+      alert("Có lỗi khi lưu run");
+    } finally {
+      setSavingRun(false);
+      setMode("summary");
+    }
   };
 
-  // ---- SUMMARY UI (giữ y nguyên logic trước, rút gọn để tập trung modal yêu cầu) ----
+  // store start time once
+  const startedAtRef = useRef(null);
+  useEffect(() => {
+    if (!startedAtRef.current) startedAtRef.current = new Date();
+  }, []);
+
+  // ---- SUMMARY UI ----
   if (mode === "summary") {
     const calories = Math.max(0, Math.round(distanceKm * 60));
-    const title = completed ? "Great Run!" : "Nice Try!";
-    const subtitle = completed
-      ? "You crushed it today"
-      : "Keep trying! You’ll do better next time.";
+    const title = distanceKm > 0 ? "Great Run!" : "No Data";
+    const subtitle =
+      distanceKm > 0 ? "Saved your run. Keep it up!" : "No distance recorded.";
 
     return (
       <div className="min-h-screen bg-[#f3f1ee]">
@@ -489,7 +650,7 @@ export default function OutdoorRun() {
             <StatCard
               icon="📍"
               title="Distance"
-              value={distanceKm.toFixed(0)}
+              value={distanceKm.toFixed(2)}
               suffix="km"
               tone="slate"
             />
@@ -536,7 +697,7 @@ export default function OutdoorRun() {
               onClick={() => navigate(ROUTE_PATH.HOME)}
               className="rounded-2xl bg-[#aeead0] px-4 py-4 text-base font-extrabold text-black shadow-sm ring-1 ring-black/10 active:scale-[0.99]"
             >
-              Save &amp; Home
+              Home
             </button>
           </div>
         </div>
@@ -554,17 +715,18 @@ export default function OutdoorRun() {
         .leaflet-control-attribution { display: none !important; }
       `}</style>
 
-      {/* ✅ Non-blocking toast modal */}
       <CongratsToast
         open={showCongrats}
         title="Congratulations!"
-        desc="You’ve completed today’s challenge."
+        desc="Bạn vừa hoàn thành mục tiêu hôm nay!"
         onClose={() => setShowCongrats(false)}
       />
 
       {/* MAP */}
       <div className="relative h-[68vh] w-full overflow-hidden">
-        <div className="absolute left-0 top-0 z-[1100] w-full px-4 pt-4">
+        {/* Top overlays */}
+        <div className="absolute left-0 top-0 z-[1100] w-full px-4 pt-4 space-y-3">
+          {/* Header row */}
           <div className="mx-auto flex w-full max-w-[460px] items-center justify-between">
             <div className="rounded-2xl bg-black/40 px-4 py-2 backdrop-blur-md ring-1 ring-white/15">
               <div className="text-base font-semibold text-white">
@@ -598,6 +760,13 @@ export default function OutdoorRun() {
               ×
             </button>
           </div>
+
+          {/* Goal progress bar */}
+          <GoalProgressBar
+            totalDoneKm={totalDoneKm}
+            targetKm={targetKm}
+            loading={goalLoading || todayRunsLoading}
+          />
         </div>
 
         <MapContainer
@@ -625,7 +794,7 @@ export default function OutdoorRun() {
           <div className="mx-auto h-1.5 w-14 rounded-full bg-black/15" />
 
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <DistanceGoalCard distanceKm={distanceKm} targetKm={targetKm} />
+            <DistanceCard distanceKm={distanceKm} />
             <TimeCard elapsedMs={elapsedMs} />
           </div>
 
@@ -651,6 +820,7 @@ export default function OutdoorRun() {
               type="button"
               onClick={() => setIsPaused((v) => !v)}
               className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-4 text-lg font-extrabold ring-1 ring-black/10 shadow-sm active:scale-[0.99]"
+              disabled={savingRun}
             >
               <span
                 className={[
@@ -668,9 +838,15 @@ export default function OutdoorRun() {
             <button
               type="button"
               onClick={onFinish}
-              className="relative overflow-hidden rounded-2xl bg-[#111827] px-4 py-4 text-lg font-extrabold text-white shadow-sm ring-1 ring-black/15 active:scale-[0.99]"
+              disabled={savingRun}
+              className={[
+                "relative overflow-hidden rounded-2xl px-4 py-4 text-lg font-extrabold text-white shadow-sm ring-1 ring-black/15 active:scale-[0.99]",
+                savingRun ? "bg-black/60" : "bg-[#111827]",
+              ].join(" ")}
             >
-              <span className="relative z-10">Finish</span>
+              <span className="relative z-10">
+                {savingRun ? "Saving..." : "Finish"}
+              </span>
               <span className="absolute inset-0 bg-gradient-to-r from-emerald-500/35 via-sky-500/25 to-transparent" />
             </button>
           </div>
