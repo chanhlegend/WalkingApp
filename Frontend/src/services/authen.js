@@ -1,7 +1,7 @@
 import axios from "axios";
 import ROUTE_PATH from "../constants/routePath";
 
-const BACKEND_ORIGIN = import.meta.env.VITE_BACKEND_ORIGIN || "http://localhost:3000";
+const BACKEND_ORIGIN = "https://walkingapp.onrender.com";
 const API_BASE = `${String(BACKEND_ORIGIN).replace(/\/+$/, "")}/api`;
 const TOKEN_KEY = "token";
 const USER_KEY = "user";
