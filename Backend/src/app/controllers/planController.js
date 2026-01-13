@@ -1,107 +1,121 @@
 const Plan = require("../models/Plan");
 
-/* ---------------- UTC Date helpers (khuyên dùng để tránh lệch ngày) ---------------- */
+/* ===================== Time helpers (Vietnam UTC+7) ===================== */
+/**
+ * Quy ước: mọi tính toán "ngày/tuần/tháng" theo VN (UTC+7).
+ * Date trong JS lưu theo UTC internally, nhưng khi ta setHours(...) trên Date đã "VN-adjusted",
+ * mốc thời gian lưu xuống DB sẽ tương ứng đúng boundary VN.
+ */
 
-function startOfDayUTC(d) {
-  const x = new Date(d);
-  x.setUTCHours(0, 0, 0, 0);
-  return x;
+// Convert một Date bất kỳ sang "Vietnam wall-clock Date"
+function toVietnamDate(date = new Date()) {
+  const utcTime = date.getTime() + date.getTimezoneOffset() * 60000;
+  return new Date(utcTime + 7 * 60 * 60000);
 }
-function endOfDayUTC(d) {
+
+function startOfDayVN(d) {
   const x = new Date(d);
-  x.setUTCHours(23, 59, 59, 999);
+  x.setHours(0, 0, 0, 0);
   return x;
 }
 
-// Monday 00:00 UTC
-function startOfWeekMondayUTC(d) {
+function endOfDayVN(d) {
   const x = new Date(d);
-  const day = x.getUTCDay(); // 0=Sun,1=Mon,...6=Sat
-  const diffToMon = day === 0 ? -6 : 1 - day;
-  x.setUTCDate(x.getUTCDate() + diffToMon);
-  x.setUTCHours(0, 0, 0, 0);
+  x.setHours(23, 59, 59, 999);
   return x;
 }
-// Sunday 23:59:59.999 UTC
-function endOfWeekSundayUTC(d) {
-  const s = startOfWeekMondayUTC(d);
+
+// Week starts Monday 00:00 VN
+function startOfWeekMondayVN(d) {
+  const x = new Date(d);
+  const day = x.getDay(); // 0=Sun,1=Mon,...6=Sat (theo "wall-clock" của x)
+  const diffToMon = (day + 6) % 7; // Mon->0, Tue->1, ..., Sun->6
+  x.setDate(x.getDate() - diffToMon);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+// Week ends Sunday 23:59:59.999 VN
+function endOfWeekSundayVN(d) {
+  const s = startOfWeekMondayVN(d);
   const e = new Date(s);
-  e.setUTCDate(e.getUTCDate() + 6);
-  e.setUTCHours(23, 59, 59, 999);
+  e.setDate(e.getDate() + 6);
+  e.setHours(23, 59, 59, 999);
   return e;
 }
 
-function startOfMonthUTC(d) {
+function startOfMonthVN(d) {
   const x = new Date(d);
-  x.setUTCDate(1);
-  x.setUTCHours(0, 0, 0, 0);
+  x.setDate(1);
+  x.setHours(0, 0, 0, 0);
   return x;
 }
-function endOfMonthUTC(d) {
-  const s = startOfMonthUTC(d);
-  const e = new Date(s);
-  e.setUTCMonth(e.getUTCMonth() + 1);
-  e.setUTCDate(0); // last day of prev month
-  e.setUTCHours(23, 59, 59, 999);
-  return e;
+
+function endOfMonthVN(d) {
+  const x = new Date(d);
+  // sang đầu tháng sau 00:00 rồi trừ 1ms
+  x.setMonth(x.getMonth() + 1, 1);
+  x.setHours(0, 0, 0, 0);
+  x.setMilliseconds(x.getMilliseconds() - 1);
+  return x;
 }
 
 function isValidNonNegativeNumber(n) {
   return Number.isFinite(n) && n >= 0;
 }
 
-/* ---------------- Range builder ---------------- */
+/* ===================== Range builder (VN) ===================== */
 
-function buildRangeUTC(interval, dateObj) {
+function buildRangeVN(interval, dateObj) {
   if (interval === "daily") {
     return {
       interval,
       name: "Daily running goal",
-      startDate: startOfDayUTC(dateObj),
-      endDate: endOfDayUTC(dateObj),
+      startDate: startOfDayVN(dateObj),
+      endDate: endOfDayVN(dateObj),
     };
   }
   if (interval === "weekly") {
     return {
       interval,
       name: "Weekly running goal",
-      startDate: startOfWeekMondayUTC(dateObj),
-      endDate: endOfWeekSundayUTC(dateObj),
+      startDate: startOfWeekMondayVN(dateObj),
+      endDate: endOfWeekSundayVN(dateObj),
     };
   }
   if (interval === "monthly") {
     return {
       interval,
       name: "Monthly running goal",
-      startDate: startOfMonthUTC(dateObj),
-      endDate: endOfMonthUTC(dateObj),
+      startDate: startOfMonthVN(dateObj),
+      endDate: endOfMonthVN(dateObj),
     };
   }
   throw new Error("Unsupported interval");
 }
 
-/* ---------------- Copy/Seed logic ---------------- */
+/* ===================== Copy/Seed logic (VN) ===================== */
 
-// Tính startDate của kỳ trước
-function previousPeriodStartUTC(interval, currentStartDate) {
+// Tính startDate của kỳ trước theo VN boundary
+function previousPeriodStartVN(interval, currentStartDate) {
   const prev = new Date(currentStartDate);
 
   if (interval === "daily") {
-    prev.setUTCDate(prev.getUTCDate() - 1);
-    prev.setUTCHours(0, 0, 0, 0);
+    prev.setDate(prev.getDate() - 1);
+    prev.setHours(0, 0, 0, 0);
     return prev;
   }
 
   if (interval === "weekly") {
-    prev.setUTCDate(prev.getUTCDate() - 7);
-    prev.setUTCHours(0, 0, 0, 0);
+    prev.setDate(prev.getDate() - 7);
+    prev.setHours(0, 0, 0, 0);
     return prev;
   }
 
   if (interval === "monthly") {
-    prev.setUTCMonth(prev.getUTCMonth() - 1);
-    prev.setUTCDate(1);
-    prev.setUTCHours(0, 0, 0, 0);
+    prev.setMonth(prev.getMonth() - 1);
+    prev.setDate(1);
+    prev.setHours(0, 0, 0, 0);
     return prev;
   }
 
@@ -138,10 +152,10 @@ async function getNearestPlanDoc({ userId, interval, targetStartDate }) {
  *   + ưu tiên copy "y chang" từ kỳ trước (daily: hôm qua, weekly: tuần trước, monthly: tháng trước)
  *   + nếu kỳ trước không tồn tại -> fallback nearest
  *   + không có gì -> totalDistance=0
- * - Tạo mới với startDate/endDate đúng của kỳ hiện tại
+ * - Tạo mới với startDate/endDate đúng của kỳ hiện tại (theo VN)
  */
 async function getOrCreatePlanForInterval({ userId, interval, dateObj }) {
-  const range = buildRangeUTC(interval, dateObj);
+  const range = buildRangeVN(interval, dateObj);
 
   // 1) đã có kỳ hiện tại?
   const existed = await Plan.findOne({
@@ -153,7 +167,7 @@ async function getOrCreatePlanForInterval({ userId, interval, dateObj }) {
   if (existed) return existed;
 
   // 2) ưu tiên copy từ kỳ trước
-  const prevStart = previousPeriodStartUTC(interval, range.startDate);
+  const prevStart = previousPeriodStartVN(interval, range.startDate);
 
   let template = await Plan.findOne({
     userId,
@@ -182,11 +196,9 @@ async function getOrCreatePlanForInterval({ userId, interval, dateObj }) {
         startDate: range.startDate,
       },
       $set: {
-        // copy "y chang" ở mức hợp lý
         name: template?.name || range.name,
         status: template?.status || "active",
         totalDistance,
-        // endDate luôn theo kỳ hiện tại
         endDate: range.endDate,
       },
     },
@@ -196,7 +208,7 @@ async function getOrCreatePlanForInterval({ userId, interval, dateObj }) {
   return doc;
 }
 
-/* ---------------- Controller ---------------- */
+/* ===================== Controller ===================== */
 
 const PlanController = {
   // POST /plans/goal-settings
@@ -213,10 +225,7 @@ const PlanController = {
         !isValidNonNegativeNumber(weeklyKm) ||
         !isValidNonNegativeNumber(monthlyKm)
       ) {
-        return res.status(400).json({
-          message: "Km values are invalid",
-          success: false,
-        });
+        return res.status(400).json({ message: "Km values are invalid", success: false });
       }
 
       // Rule: weekly >= daily, monthly >= weekly
@@ -233,29 +242,30 @@ const PlanController = {
         });
       }
 
-      const now = new Date();
+      // ✅ now theo giờ VN
+      const vnNow = toVietnamDate(new Date());
 
       const dailyRange = {
         interval: "daily",
         name: "Daily running goal",
-        startDate: startOfDayUTC(now),
-        endDate: endOfDayUTC(now),
+        startDate: startOfDayVN(vnNow),
+        endDate: endOfDayVN(vnNow),
         totalDistance: dailyKm,
       };
 
       const weeklyRange = {
         interval: "weekly",
         name: "Weekly running goal",
-        startDate: startOfWeekMondayUTC(now),
-        endDate: endOfWeekSundayUTC(now),
+        startDate: startOfWeekMondayVN(vnNow),
+        endDate: endOfWeekSundayVN(vnNow),
         totalDistance: weeklyKm,
       };
 
       const monthlyRange = {
         interval: "monthly",
         name: "Monthly running goal",
-        startDate: startOfMonthUTC(now),
-        endDate: endOfMonthUTC(now),
+        startDate: startOfMonthVN(vnNow),
+        endDate: endOfMonthVN(vnNow),
         totalDistance: monthlyKm,
       };
 
@@ -304,11 +314,8 @@ const PlanController = {
         success: true,
       });
     } catch (e) {
-      console.log(e);
-      return res.status(500).json({
-        message: "Internal server error",
-        success: false,
-      });
+      console.error(e);
+      return res.status(500).json({ message: "Internal server error", success: false });
     }
   },
 
@@ -319,18 +326,20 @@ const PlanController = {
   async getPlansByDate(req, res) {
     try {
       const userId = req.user.id;
-
       const dateStr = req.query.date || req.body?.currentDate;
-      const dateObj = dateStr ? new Date(dateStr) : new Date();
 
-      if (Number.isNaN(dateObj.getTime())) {
+      // ✅ parse input -> rồi quy về VN wall-clock
+      const base = dateStr ? new Date(dateStr) : new Date();
+      const vnDate = toVietnamDate(base);
+
+      if (Number.isNaN(vnDate.getTime())) {
         return res.status(400).json({ message: "Invalid date", success: false });
       }
 
       const [daily, weekly, monthly] = await Promise.all([
-        getOrCreatePlanForInterval({ userId, interval: "daily", dateObj }),
-        getOrCreatePlanForInterval({ userId, interval: "weekly", dateObj }),
-        getOrCreatePlanForInterval({ userId, interval: "monthly", dateObj }),
+        getOrCreatePlanForInterval({ userId, interval: "daily", dateObj: vnDate }),
+        getOrCreatePlanForInterval({ userId, interval: "weekly", dateObj: vnDate }),
+        getOrCreatePlanForInterval({ userId, interval: "monthly", dateObj: vnDate }),
       ]);
 
       return res.status(200).json({
@@ -339,7 +348,7 @@ const PlanController = {
         success: true,
       });
     } catch (e) {
-      console.log(e);
+      console.error(e);
       return res.status(500).json({ message: "Internal server error", success: false });
     }
   },
@@ -360,13 +369,14 @@ const PlanController = {
       });
 
       await newPlan.save();
+
       return res.status(201).json({
         data: newPlan,
         message: "Plan created successfully",
         success: true,
       });
     } catch (e) {
-      console.log(e);
+      console.error(e);
       return res.status(500).json({ message: "Internal server error", success: false });
     }
   },
@@ -383,7 +393,7 @@ const PlanController = {
         success: true,
       });
     } catch (e) {
-      console.log(e);
+      console.error(e);
       return res.status(500).json({ message: "Internal server error", success: false });
     }
   },
@@ -410,7 +420,7 @@ const PlanController = {
         success: true,
       });
     } catch (e) {
-      console.log(e);
+      console.error(e);
       return res.status(500).json({ message: "Internal server error", success: false });
     }
   },
@@ -434,7 +444,7 @@ const PlanController = {
         success: true,
       });
     } catch (e) {
-      console.log(e);
+      console.error(e);
       return res.status(500).json({ message: "Internal server error", success: false });
     }
   },
