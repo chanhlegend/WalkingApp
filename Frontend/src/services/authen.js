@@ -2,7 +2,7 @@ import axios from "axios";
 import ROUTE_PATH from "../constants/routePath";
 
 // const BACKEND_ORIGIN = import.meta.env.VITE_BACKEND_ORIGIN || "http://localhost:3000";
-const API_BASE = "http://localhost:3000/api";
+const API_BASE = "https://walkingapp.onrender.com/api";
 const TOKEN_KEY = "token";
 const USER_KEY = "user";
 
