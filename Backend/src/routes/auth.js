@@ -6,6 +6,9 @@ const router = express.Router();
 
 router.post('/email/request-otp', authenController.requestEmailOtp);
 router.post('/email/verify-otp', authenController.verifyEmailOtp);
+router.post('/email/login', authenController.loginWithEmailPassword);
+router.post('/email/forgot-password', authenController.requestPasswordResetOtp);
+router.post('/email/reset-password', authenController.resetPasswordWithOtp);
 
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 

@@ -1,7 +1,8 @@
 import axios from "axios";
 import ROUTE_PATH from "../constants/routePath";
 
-const API_BASE = "http://localhost:3000/api"; 
+const BACKEND_ORIGIN = import.meta.env.VITE_BACKEND_ORIGIN || "http://localhost:3000";
+const API_BASE = `${String(BACKEND_ORIGIN).replace(/\/+$/, "")}/api`;
 const TOKEN_KEY = "token";
 const USER_KEY = "user";
 
@@ -9,6 +10,14 @@ const http = axios.create({
   baseURL: API_BASE,
   timeout: 15000,
 });
+
+function emitUserUpdated() {
+  try {
+    window.dispatchEvent(new Event("auth:user-updated"));
+  } catch {
+    // ignore
+  }
+}
 
 function getStoredToken() {
   const token = localStorage.getItem(TOKEN_KEY);
@@ -30,6 +39,7 @@ function saveSession({ token, user, expiresInMs = 14 * 24 * 60 * 60 * 1000 }) {
     USER_KEY,
     JSON.stringify({ ...(user || {}), token, expiresAt: Date.now() + expiresInMs })
   );
+  emitUserUpdated();
 }
 
 function updateStoredUser(patch) {
@@ -40,6 +50,7 @@ function updateStoredUser(patch) {
       USER_KEY,
       JSON.stringify({ ...current, ...(patch || {}), token: getStoredToken() })
     );
+    emitUserUpdated();
   } catch {
     // ignore
   }
@@ -48,6 +59,7 @@ function updateStoredUser(patch) {
 function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(USER_KEY);
+  emitUserUpdated();
 }
 
 // auto attach Bearer token
@@ -66,6 +78,19 @@ export const AuthService = {
     localStorage.setItem(TOKEN_KEY, token);
   },
 
+  loginEmail: async (email, password) => {
+    try {
+      const res = await http.post("/auth/email/login", { email, password });
+      const { token, user } = res.data || {};
+      if (!token || !user) throw new Error("Dữ liệu trả về không hợp lệ");
+
+      saveSession({ token, user });
+      return res.data; // { token, user }
+    } catch (error) {
+      throw new Error(error.response?.data?.message || "Đăng nhập thất bại");
+    }
+  },
+
   me: async () => {
     try {
       const res = await http.get("/me");
@@ -75,12 +100,58 @@ export const AuthService = {
     }
   },
 
+  /**
+   * If a token exists but session user is missing (or stale), fetches /me and
+   * repopulates sessionStorage so layouts can show avatar/name.
+   */
+  ensureSessionUser: async () => {
+    const token = getStoredToken();
+    if (!token) return null;
+
+    try {
+      const raw = sessionStorage.getItem(USER_KEY);
+      if (raw) {
+        const existing = JSON.parse(raw);
+        if (existing && typeof existing === "object") return existing;
+      }
+    } catch {
+      // ignore
+    }
+
+    const me = await AuthService.me();
+    const user = me?.user;
+    if (user) saveSession({ token, user });
+    return user || null;
+  },
+
   requestOtp: async (email, password, flow = "signup") => {
     try {
       const res = await http.post("/auth/email/request-otp", { flow, email, password });
       return res.data; // { verificationId, expiresAt }
     } catch (error) {
       throw new Error(error.response?.data?.message || "Gửi OTP thất bại");
+    }
+  },
+
+  requestPasswordResetOtp: async (email) => {
+    try {
+      const res = await http.post("/auth/email/forgot-password", { email });
+      return res.data; // { verificationId, expiresAt }
+    } catch (error) {
+      throw new Error(error.response?.data?.message || "Gửi OTP thất bại");
+    }
+  },
+
+  resetPasswordWithOtp: async (verificationId, code, newPassword) => {
+    try {
+      const res = await http.post("/auth/email/reset-password", {
+        verificationId,
+        code,
+        newPassword,
+      });
+      return res.data; // { message }
+    } catch (error) {
+      throw new Error(error.response?.data?.message || "Đổi mật khẩu thất bại");
     }
   },
 

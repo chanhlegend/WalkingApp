@@ -41,10 +41,9 @@ export default function EmailAuth() {
         if (cancelled) return;
 
         if (me?.user?.onboardingCompleted) {
-          navigate(ROUTE_PATH.ROOT, { replace: true }); // HOME
+          navigate(ROUTE_PATH.HOME, { replace: true });
           return;
         }
-        // nếu chưa onboarding thì đưa thẳng onboarding
         if (me?.user && !me.user.onboardingCompleted) {
           navigate(ROUTE_PATH.ONBOARDING, { replace: true });
           return;
@@ -72,11 +71,18 @@ export default function EmailAuth() {
 
     setLoading(true);
     try {
-      const data = await AuthService.requestOtp(email, password, isLogin ? "login" : "signup");
+      if (isLogin) {
+        const res = await AuthService.loginEmail(email, password);
+        void res;
+        navigate(ROUTE_PATH.HOME, { replace: true });
+        return;
+      }
+
+      const data = await AuthService.requestOtp(email, password, "signup");
       sessionStorage.setItem("verificationId", data.verificationId);
-      navigate(ROUTE_PATH.OTP);
+      navigate(`${ROUTE_PATH.OTP}?flow=signup`);
     } catch (err) {
-      setError(err?.message || "Failed to request OTP");
+      setError(err?.message || (isLogin ? "Login failed" : "Failed to request OTP"));
     } finally {
       setLoading(false);
     }
@@ -134,8 +140,19 @@ export default function EmailAuth() {
           {error ? <div className="error">{error}</div> : null}
 
           <button className="btn btn--primary" disabled={loading || (!isLogin && !passwordCheck.ok)} type="submit">
-            {loading ? "Sending..." : "Send OTP"}
+            {loading ? (isLogin ? "Logging in..." : "Sending...") : (isLogin ? "Login" : "Send OTP")}
           </button>
+
+          {isLogin ? (
+            <button
+              className="linkBtn"
+              type="button"
+              disabled={loading}
+              onClick={() => navigate(ROUTE_PATH.FORGOT_PASSWORD)}
+            >
+              Forgot password?
+            </button>
+          ) : null}
         </form>
 
         <div className="hint">

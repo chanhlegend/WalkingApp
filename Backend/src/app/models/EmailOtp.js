@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const EmailOtpSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, index: true },
-    purpose: { type: String, enum: ['signup', 'login'], required: true, index: true },
+    purpose: { type: String, enum: ['signup', 'login', 'reset'], required: true, index: true },
 
     otpHash: { type: String, required: true },
     expiresAt: { type: Date, required: true, index: true },

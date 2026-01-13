@@ -12,7 +12,7 @@ import {
 import ROUTE_PATH from "../constants/routePath";
 import AuthService from "../services/authen";
 
-function getSessionUser() {
+function readSessionUser() {
   try {
     const raw = sessionStorage.getItem("user");
     if (!raw) return null;
@@ -26,17 +26,38 @@ export default function AuthedShellLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [ready, setReady] = useState(false);
+  const [user, setUser] = useState(() => readSessionUser());
 
   useEffect(() => {
-    const token = localStorage.getItem("token") || "";
-    if (!token) {
-      navigate(ROUTE_PATH.SIGNUP, { replace: true });
-      return;
-    }
-    setReady(true);
+    const sync = () => setUser(readSessionUser());
+    window.addEventListener("auth:user-updated", sync);
+    return () => window.removeEventListener("auth:user-updated", sync);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const token = localStorage.getItem("token") || "";
+      if (!token) {
+        navigate(ROUTE_PATH.SIGNUP, { replace: true });
+        return;
+      }
+
+      setReady(true);
+
+      try {
+        const ensured = await AuthService.ensureSessionUser();
+        if (!cancelled && ensured) setUser(ensured);
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
-  const user = useMemo(() => getSessionUser(), []);
   const displayName = user?.fullName || user?.name || "";
   const avatarUrl = user?.avatarUrl || user?.photo || user?.picture || "";
 
@@ -173,15 +194,16 @@ body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, 
 .app-topRight{ display:flex; align-items:center; gap: 10px; }
 
 .app-avatar{
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
+  width: clamp(36px, 10vw, 44px);
+  height: clamp(36px, 10vw, 44px);
+  border-radius: 50%;
   overflow:hidden;
   border: 1px solid rgba(0,0,0,.14);
   background: rgba(255,255,255,.65);
+  flex: 0 0 auto;
 }
 
-.app-avatarImg{ width: 100%; height: 100%; object-fit: cover; display:block; }
+.app-avatarImg{ width: 100%; height: 100%; object-fit: cover; display:block; border-radius: inherit; }
 .app-avatarFallback{ width: 100%; height: 100%; background: rgba(0,0,0,.08); }
 
 .app-greetText{ font-weight: 500; font-size: 16px; }
