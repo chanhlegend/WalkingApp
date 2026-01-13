@@ -345,6 +345,7 @@ export default function OutdoorRun() {
 
   // Fake HR
   const [avgHr, setAvgHr] = useState(147);
+  const [avgHrFinal, setAvgHrFinal] = useState(null);
 
   // UI mode
   const [mode, setMode] = useState("running"); // running | summary
@@ -573,6 +574,8 @@ export default function OutdoorRun() {
         console.log("Save run failed:", res?.message);
         alert(res?.message || "Lưu run thất bại");
       } else {
+        console.log(res.data);
+        setAvgHrFinal(res.data?.avg_heartRate || avgHr);
         // update todayTotalKm ngay lập tức để goal bar / home hiển thị đúng
         setTodayTotalKm((v) => v + distanceKm);
       }
@@ -664,7 +667,7 @@ export default function OutdoorRun() {
             <StatCard
               icon="❤"
               title="Avg HR"
-              value={`${avgHr}`}
+              value={`${avgHrFinal}`}
               suffix="bpm"
               tone="rose"
             />
@@ -707,7 +710,7 @@ export default function OutdoorRun() {
 
   // ---- RUNNING UI ----
   return (
-    <div className="min-h-screen bg-[#0b1220]">
+    <div className="min-h-screen ">
       <style>{`
         .leaflet-container img { max-width: none !important; }
         .leaflet-container .leaflet-tile { max-width: none !important; max-height: none !important; }
@@ -791,7 +794,7 @@ export default function OutdoorRun() {
       {/* BOTTOM SHEET */}
       <div className="-mt-10 rounded-t-[34px] bg-[#f7f7fb] px-4 pb-10 pt-5 shadow-[0_-20px_60px_rgba(0,0,0,0.35)]">
         <div className="mx-auto w-full max-w-[460px]">
-          <div className="mx-auto h-1.5 w-14 rounded-full bg-black/15" />
+          <div className="mx-auto h-1.5 w-14 rounded-full" />
 
           <div className="mt-5 grid grid-cols-2 gap-3">
             <DistanceCard distanceKm={distanceKm} />

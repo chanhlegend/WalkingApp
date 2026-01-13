@@ -12,7 +12,7 @@ const NewRun = () => {
     const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2]">
+    <div className="min-h-screen">
       <div className="mx-auto w-full max-w-[420px] px-4 py-4">
         {/* Start New Run */}
         <button
