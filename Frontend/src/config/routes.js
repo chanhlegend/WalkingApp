@@ -4,6 +4,7 @@ import Start from "../pages/Landing/Start";
 import Signup from "../pages/Auth/Signup";
 import EmailAuth from "../pages/Auth/EmailAuth";
 import OtpVerify from "../pages/Auth/OtpVerify";
+import ForgotPassword from "../pages/Auth/ForgotPassword";
 import AuthCallback from "../pages/Auth/AuthCallback";
 import RequireAuthLayout from "../layouts/RequireAuthLayout";
 import AuthedShellLayout from "../layouts/AuthedShellLayout";
@@ -35,6 +36,7 @@ const AppRoutes = [
 	{ path: ROUTE_PATH.SIGNIN, page: EmailAuth },
 	{ path: ROUTE_PATH.EMAIL, page: EmailAuth },
 	{ path: ROUTE_PATH.OTP, page: OtpVerify },
+	{ path: ROUTE_PATH.FORGOT_PASSWORD, page: ForgotPassword },
 	{ path: ROUTE_PATH.AUTH_CALLBACK, page: AuthCallback },
 	{ path: ROUTE_PATH.HOME, page: Home, layout: AuthedShellLayout },
 

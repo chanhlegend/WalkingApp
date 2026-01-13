@@ -21,13 +21,13 @@ export default function Signup() {
   const BACKEND_ORIGIN =
     import.meta.env.VITE_BACKEND_ORIGIN || "http://localhost:3000";
 
-  // ✅ Nếu đã đăng nhập + onboarding xong => về Home luôn
+  
   useEffect(() => {
     (async () => {
       try {
-        const me = await AuthService.me(); // { user }
+        const me = await AuthService.me(); 
         if (me?.user?.onboardingCompleted) {
-          navigate(ROUTE_PATH.ROOT, { replace: true }); // hoặc ROUTE_PATH.HOME
+          navigate(ROUTE_PATH.ROOT, { replace: true }); 
         }
       } catch {
         // chưa login thì ignore

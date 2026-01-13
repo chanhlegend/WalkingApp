@@ -6,6 +6,7 @@ const ROUTE_PATH = {
 	SIGNIN: "/signin",
 	EMAIL: "/email",
 	OTP: "/otp",
+	FORGOT_PASSWORD: "/forgot-password",
 	AUTH_CALLBACK: "/auth/callback",
 	GOOGLE_AUTH: "/api/auth/google",
 
