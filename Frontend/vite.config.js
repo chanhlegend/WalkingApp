@@ -15,7 +15,7 @@ export default defineConfig({
     proxy: {
       // ✅ CHỈ proxy API backend
       "/api": {
-        target: "https://walkingapp.onrender.com",
+        target: "http://localhost:3000",
         changeOrigin: true,
         secure: false,
       },
