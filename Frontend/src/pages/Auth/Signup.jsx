@@ -19,7 +19,7 @@ export default function Signup() {
   const navigate = useNavigate();
 
   const BACKEND_ORIGIN =
-    import.meta.env.VITE_BACKEND_ORIGIN || "http://localhost:3000";
+    import.meta.env.VITE_BACKEND_ORIGIN || "https://walkingapp.onrender.com";
 
   
   useEffect(() => {
