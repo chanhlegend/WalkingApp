@@ -339,11 +339,11 @@ const authenController = {
       if (!req.user) return res.status(401).json({ message: "Google authentication failed" });
 
       const token = signToken(req.user);
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+      const frontendUrl = process.env.FRONTEND_URL || "https://walking-app.vercel.app";
 
       return res.redirect(`${frontendUrl}/auth/callback?token=${encodeURIComponent(token)}`);
     } catch (e) {
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+      const frontendUrl = process.env.FRONTEND_URL || "https://walking-app.vercel.app";
       return res.redirect(`${frontendUrl}${ROUTE_PATH?.SIGNIN || "/signin"}`);
     }
   },
