@@ -25,6 +25,9 @@ import OutdoorRun from "../pages/Running/OutdoorRun";
 
 import SettingRunning from "../pages/Setting/SettingRunning";
 
+// AI Chat
+import AIChat from "../pages/AIChat/AIChat";
+
 import ROUTE_PATH from "../constants/routePath";
 
 
@@ -57,6 +60,9 @@ const AppRoutes = [
 
 	// Settings
 	{ path: ROUTE_PATH.SETTING_RUNNING, page: SettingRunning, layout: AuthedShellLayout },
+
+	// AI Chat (full screen, no layout)
+	{ path: ROUTE_PATH.AI_CHAT, page: AIChat },
 ]
 
 export { AppRoutes };
