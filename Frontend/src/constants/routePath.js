@@ -28,6 +28,9 @@ const ROUTE_PATH = {
 
 	// Settings
 	SETTING_RUNNING: "/settings/running",
+
+	// AI Chat
+	AI_CHAT: "/ai-chat",
 };
 
 export default ROUTE_PATH;
