@@ -1,18 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Polyline,
-  useMap,
-} from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import ROUTE_PATH from "../../constants/routePath";
 import { useNavigate } from "react-router-dom";
 import planService from "../../services/planService";
 import runProcessService from "../../services/runProcessService";
 
-// Leaflet icons (Vite/CRA)
+// Leaflet icons (Vite/CRA) - giữ lại để Leaflet không lỗi asset
 import marker2x from "leaflet/dist/images/marker-icon-2x.png";
 import marker1x from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
@@ -26,7 +20,6 @@ L.Icon.Default.mergeOptions({
 
 /* ---------------------- Date helpers (local date) ---------------------- */
 function toYYYYMMDDLocal(d = new Date()) {
-  // local yyyy-mm-dd để match "ngày hôm nay" theo timezone của user
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
@@ -35,15 +28,15 @@ function toYYYYMMDDLocal(d = new Date()) {
 
 /* ---------------------- Map Helpers ---------------------- */
 
-function MapAutoFix({ center, path }) {
+function MapAutoFix({ center, points }) {
   const map = useMap();
 
   useEffect(() => {
     const fix = () => {
       map.invalidateSize(true);
 
-      if (path?.length >= 2) {
-        const bounds = L.latLngBounds(path.map((p) => [p.lat, p.lng]));
+      if (points?.length >= 2) {
+        const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
         map.fitBounds(bounds, { padding: [30, 30] });
       } else if (center) {
         map.setView(center, map.getZoom() || 16, { animate: false });
@@ -63,7 +56,7 @@ function MapAutoFix({ center, path }) {
       clearTimeout(t4);
       window.removeEventListener("resize", fix);
     };
-  }, [map, center, path]);
+  }, [map, center, points]);
 
   return null;
 }
@@ -73,9 +66,7 @@ function RecenterButton({ center }) {
   return (
     <button
       type="button"
-      onClick={() =>
-        map.setView(center, map.getZoom() || 16, { animate: true })
-      }
+      onClick={() => map.setView(center, map.getZoom() || 16, { animate: true })}
       className="absolute bottom-24 right-4 z-[1200] grid h-11 w-11 place-items-center rounded-full bg-white/95 shadow-lg ring-1 ring-black/10 backdrop-blur active:scale-[0.98]"
       aria-label="Recenter"
       title="Recenter"
@@ -84,6 +75,36 @@ function RecenterButton({ center }) {
     </button>
   );
 }
+
+// Runner marker icon (abstract + fun)
+const runnerIcon = L.divIcon({
+  className: "",
+  html: `
+    <div style="
+      width:44px;height:44px;
+      border-radius:9999px;
+      background: rgba(255,255,255,0.92);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.18);
+      border: 1px solid rgba(0,0,0,0.12);
+      display:flex;align-items:center;justify-content:center;
+      backdrop-filter: blur(6px);
+      position: relative;
+    ">
+      <div style="font-size:22px; transform: translateY(-1px);">🏃‍♂️</div>
+      <div style="
+        position:absolute; bottom:-10px; left:50%;
+        width: 12px; height: 12px;
+        background: rgba(255,255,255,0.92);
+        border-left: 1px solid rgba(0,0,0,0.12);
+        border-bottom: 1px solid rgba(0,0,0,0.12);
+        transform-origin: center;
+        transform: translateX(-50%) rotate(45deg);
+      "></div>
+    </div>
+  `,
+  iconSize: [44, 44],
+  iconAnchor: [22, 44],
+});
 
 // Haversine distance (meters)
 function haversineMeters(a, b) {
@@ -108,7 +129,6 @@ function formatTime(ms) {
   const hh = String(Math.floor(totalSec / 3600)).padStart(2, "0");
   const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
   const ss = String(totalSec % 60).padStart(2, "0");
-  // hiển thị hh:mm:ss cho chạy dài
   return hh !== "00" ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
@@ -133,12 +153,7 @@ function StatCard({ icon, title, value, suffix, tone = "slate" }) {
   return (
     <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="flex items-center gap-2 text-sm font-semibold text-black/55">
-        <span
-          className={[
-            "grid h-8 w-8 place-items-center rounded-xl",
-            toneCls,
-          ].join(" ")}
-        >
+        <span className={["grid h-8 w-8 place-items-center rounded-xl", toneCls].join(" ")}>
           {icon}
         </span>
         <span>{title}</span>
@@ -147,9 +162,7 @@ function StatCard({ icon, title, value, suffix, tone = "slate" }) {
       <div className="mt-2 flex items-end gap-1">
         <div className="text-3xl font-extrabold text-black">{value}</div>
         {suffix ? (
-          <div className="pb-1 text-sm font-semibold text-black/70">
-            {suffix}
-          </div>
+          <div className="pb-1 text-sm font-semibold text-black/70">{suffix}</div>
         ) : null}
       </div>
     </div>
@@ -167,9 +180,7 @@ function DistanceCard({ distanceKm }) {
       </div>
 
       <div className="mt-4 flex items-end gap-2">
-        <div className="text-4xl font-extrabold text-black">
-          {distanceKm.toFixed(2)}
-        </div>
+        <div className="text-4xl font-extrabold text-black">{distanceKm.toFixed(2)}</div>
         <div className="pb-1 text-sm font-semibold text-black/60">km</div>
       </div>
     </div>
@@ -180,15 +191,11 @@ function TimeCard({ elapsedMs }) {
   return (
     <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="flex items-center gap-3 text-sm font-semibold text-black/55">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-black/5">
-          🕒
-        </span>
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-black/5">🕒</span>
         <span>Time</span>
       </div>
 
-      <div className="mt-4 text-4xl font-extrabold text-black tracking-wider">
-        {formatTime(elapsedMs)}
-      </div>
+      <div className="mt-4 text-4xl font-extrabold text-black tracking-wider">{formatTime(elapsedMs)}</div>
     </div>
   );
 }
@@ -203,9 +210,7 @@ function CongratsToast({ open, title, desc, onClose }) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-base font-extrabold text-black">{title}</div>
-              <div className="mt-1 text-sm font-semibold text-black/70">
-                {desc}
-              </div>
+              <div className="mt-1 text-sm font-semibold text-black/70">{desc}</div>
             </div>
             <button
               type="button"
@@ -226,7 +231,6 @@ function CongratsToast({ open, title, desc, onClose }) {
 
 function progressStyle(ratio) {
   if (ratio >= 1) {
-    // 🌈 rainbow
     return {
       track: "bg-white/15",
       fillClass: "",
@@ -234,7 +238,7 @@ function progressStyle(ratio) {
         background:
           "linear-gradient(90deg,#ff0000,#ff7a00,#ffd400,#00c853,#00b0ff,#3f51b5,#9c27b0)",
       },
-      label: "🎉 Bạn đã hoàn thành mục tiêu hôm nay",
+      label: "🎉 You have completed today's goal",
       labelClass: "text-emerald-200",
     };
   }
@@ -243,7 +247,7 @@ function progressStyle(ratio) {
       track: "bg-white/15",
       fillClass: "bg-rose-400",
       fillStyle: undefined,
-      label: "Cố lên! Bạn đang ở giai đoạn khởi động",
+      label: "Keep going! You're in the warm-up phase",
       labelClass: "text-rose-200",
     };
   }
@@ -256,26 +260,18 @@ function progressStyle(ratio) {
       labelClass: "text-amber-200",
     };
   }
-  // < 100%
   return {
     track: "bg-white/15",
     fillClass: "bg-emerald-400",
     fillStyle: undefined,
-    label: "Gần xong rồi! Tiếp tục nhé",
+    label: "Almost there! Keep going",
     labelClass: "text-emerald-200",
   };
 }
 
-/**
- * Goal bar:
- * - progress = (todayTotalKm + currentRunKm) / targetKm
- * - đổi màu theo ratio
- * - khi >= 100% -> rainbow + label "Bạn đã hoàn thành..."
- */
 function GoalProgressBar({ totalDoneKm, targetKm, loading }) {
-  const ratio =
-    targetKm > 0 ? Math.max(0, Math.min(1.5, totalDoneKm / targetKm)) : 0; // allow >1 for display
-  const pct = Math.min(100, Math.round(ratio * 100 * 10) / 10); // 1 decimal
+  const ratio = targetKm > 0 ? Math.max(0, Math.min(1.5, totalDoneKm / targetKm)) : 0;
+  const pct = Math.min(100, Math.round(ratio * 100 * 10) / 10);
   const style = progressStyle(ratio);
 
   return (
@@ -284,21 +280,11 @@ function GoalProgressBar({ totalDoneKm, targetKm, loading }) {
         <div className="flex items-center justify-between">
           <div className="text-sm font-extrabold text-white">Today goal</div>
           <div className="text-xs font-semibold text-white/80">
-            {loading
-              ? "Loading…"
-              : `${totalDoneKm.toFixed(2)} / ${targetKm} km • ${Math.min(
-                  100,
-                  pct
-                )}%`}
+            {loading ? "Loading…" : `${totalDoneKm.toFixed(2)} / ${targetKm} km • ${Math.min(100, pct)}%`}
           </div>
         </div>
 
-        <div
-          className={[
-            "mt-2 h-2 w-full overflow-hidden rounded-full",
-            style.track,
-          ].join(" ")}
-        >
+        <div className={["mt-2 h-2 w-full overflow-hidden rounded-full", style.track].join(" ")}>
           <div
             className={["h-full rounded-full", style.fillClass].join(" ")}
             style={{
@@ -308,12 +294,8 @@ function GoalProgressBar({ totalDoneKm, targetKm, loading }) {
           />
         </div>
 
-        <div
-          className={["mt-1 text-[11px] font-semibold", style.labelClass].join(
-            " "
-          )}
-        >
-          {ratio >= 1 ? "🎉 Bạn đã hoàn thành mục tiêu hôm nay" : style.label}
+        <div className={["mt-1 text-[11px] font-semibold", style.labelClass].join(" ")}>
+          {ratio >= 1 ? "🎉 You have completed today's goal" : style.label}
         </div>
       </div>
     </div>
@@ -333,7 +315,16 @@ export default function OutdoorRun() {
 
   // GPS
   const [pos, setPos] = useState(null);
-  const [path, setPath] = useState([]);
+
+  /**
+   * ✅ segments: KHÔNG BAO GIỜ XÓA khi resume
+   * - Mỗi segment là một đoạn xanh liên tục.
+   * - Pause: dừng ghi vào segment hiện tại.
+   * - Resume: tạo segment mới bắt đầu từ điểm GPS mới (không nối B->C).
+   */
+  const [segments, setSegments] = useState([]); // Array<Array<Point>>
+  const startNewSegmentRef = useRef(true);
+
   const watchIdRef = useRef(null);
 
   // Timer
@@ -396,9 +387,7 @@ export default function OutdoorRun() {
         if (!rp?.success || !Array.isArray(rp?.data)) {
           setTodayTotalKm(0);
         } else {
-          // sum distance from runs
           const sum = rp.data.reduce((acc, item) => {
-            // hỗ trợ nhiều field name khác nhau:
             const v =
               item?.distanceKm ??
               item?.totalDistance ??
@@ -431,7 +420,7 @@ export default function OutdoorRun() {
     return () => clearInterval(id);
   }, [isPaused, mode]);
 
-  // Geolocation watch
+  // Geolocation watch (segments-based)
   useEffect(() => {
     if (mode !== "running") return;
 
@@ -455,33 +444,45 @@ export default function OutdoorRun() {
 
         setPos(next);
 
-        setPath((prev) => {
-          if (isPaused) return prev;
+        setSegments((prevSegs) => {
+          // ✅ pause: KHÔNG ghi gì, KHÔNG xóa đoạn cũ
+          if (isPaused) return prevSegs;
 
           const MAX_ACCURACY = 35;
-          if (next.accuracy && next.accuracy > MAX_ACCURACY) return prev;
+          if (next.accuracy && next.accuracy > MAX_ACCURACY) return prevSegs;
 
-          const last = prev[prev.length - 1];
           const nextPoint = {
             lat: next.lat,
             lng: next.lng,
             accuracy: next.accuracy,
           };
 
-          if (!last) return [nextPoint];
+          // ✅ Resume lần đầu sau pause -> tạo segment mới (không nối từ B -> C)
+          if (startNewSegmentRef.current || prevSegs.length === 0) {
+            startNewSegmentRef.current = false;
+            return [...prevSegs, [nextPoint]];
+          }
+
+          // Append vào segment hiện tại
+          const segs = [...prevSegs];
+          const lastSeg = [...segs[segs.length - 1]];
+          const last = lastSeg[lastSeg.length - 1];
 
           const d = haversineMeters(last, nextPoint);
-          if (d < 2) return prev;
-          if (d > 60) return prev;
+          if (d < 2) return prevSegs;
+          if (d > 60) return prevSegs;
 
-          return [...prev, nextPoint];
+          // ✅ chỉ cộng distance khi nối trong CÙNG segment
+          setDistanceM((m) => m + d);
+
+          lastSeg.push(nextPoint);
+          segs[segs.length - 1] = lastSeg;
+          return segs;
         });
       },
       (err) => {
         console.error(err);
-        alert(
-          "Không lấy được vị trí. Hãy bật Location và cho phép quyền truy cập."
-        );
+        alert("Không lấy được vị trí. Hãy bật Location và cho phép quyền truy cập.");
       },
       {
         enableHighAccuracy: true,
@@ -491,18 +492,9 @@ export default function OutdoorRun() {
     );
 
     return () => {
-      if (watchIdRef.current != null)
-        navigator.geolocation.clearWatch(watchIdRef.current);
+      if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);
     };
   }, [isPaused, mode]);
-
-  // Distance incremental
-  useEffect(() => {
-    if (path.length < 2) return;
-    const a = path[path.length - 2];
-    const b = path[path.length - 1];
-    setDistanceM((prev) => prev + haversineMeters(a, b));
-  }, [path]);
 
   // Fake HR jitter
   useEffect(() => {
@@ -531,15 +523,15 @@ export default function OutdoorRun() {
     return [21.0587, 105.8105];
   }, [pos]);
 
-  const paceText = useMemo(
-    () => formatPace(elapsedMs, distanceKm),
-    [elapsedMs, distanceKm]
-  );
+  const paceText = useMemo(() => formatPace(elapsedMs, distanceKm), [elapsedMs, distanceKm]);
 
-  const polylinePositions = useMemo(
-    () => path.map((p) => [p.lat, p.lng]),
-    [path]
-  );
+  // Flatten all points for fitBounds
+  const allPoints = useMemo(() => segments.flat(), [segments]);
+
+  // MultiPolyline: positions = Array<Array<[lat,lng]>>
+  const polylinePositions = useMemo(() => {
+    return segments.map((seg) => seg.map((p) => [p.lat, p.lng]));
+  }, [segments]);
 
   const stopTracking = () => {
     if (watchIdRef.current != null) {
@@ -547,6 +539,12 @@ export default function OutdoorRun() {
       watchIdRef.current = null;
     }
   };
+
+  // store start time once
+  const startedAtRef = useRef(null);
+  useEffect(() => {
+    if (!startedAtRef.current) startedAtRef.current = new Date();
+  }, []);
 
   // ✅ FINISH = stop + save to DB + go summary
   const onFinish = async () => {
@@ -564,19 +562,17 @@ export default function OutdoorRun() {
         distance: Number(distanceKm.toFixed(3)), // km
         timeElapsed: durationSec, // seconds
         avg_heartRate: avgHr,
-        caloriesBurned: Math.round(distanceKm * 60), // optional
+        caloriesBurned: Math.round(distanceKm * 60),
       };
 
       const res = await runProcessService.createRunProcess(payload);
 
       if (!res?.success) {
-        // vẫn cho qua summary, nhưng báo lỗi lưu
         console.log("Save run failed:", res?.message);
         alert(res?.message || "Lưu run thất bại");
       } else {
         console.log(res.data);
         setAvgHrFinal(res.data?.avg_heartRate || avgHr);
-        // update todayTotalKm ngay lập tức để goal bar / home hiển thị đúng
         setTodayTotalKm((v) => v + distanceKm);
       }
     } catch (e) {
@@ -588,18 +584,11 @@ export default function OutdoorRun() {
     }
   };
 
-  // store start time once
-  const startedAtRef = useRef(null);
-  useEffect(() => {
-    if (!startedAtRef.current) startedAtRef.current = new Date();
-  }, []);
-
   // ---- SUMMARY UI ----
   if (mode === "summary") {
     const calories = Math.max(0, Math.round(distanceKm * 60));
     const title = distanceKm > 0 ? "Great Run!" : "No Data";
-    const subtitle =
-      distanceKm > 0 ? "Saved your run. Keep it up!" : "No distance recorded.";
+    const subtitle = distanceKm > 0 ? "Saved your run. Keep it up!" : "No distance recorded.";
 
     return (
       <div className="min-h-screen bg-[#f3f1ee]">
@@ -613,26 +602,17 @@ export default function OutdoorRun() {
         <div className="mx-auto w-full max-w-[480px] px-4 pb-10 pt-6">
           <div className="rounded-3xl bg-[#aeead0] px-5 py-6 text-center shadow-sm">
             <div className="text-4xl">🎉</div>
-            <div className="mt-2 text-2xl font-extrabold text-black">
-              {title}
-            </div>
-            <div className="mt-1 text-sm font-semibold text-black/70">
-              {subtitle}
-            </div>
+            <div className="mt-2 text-2xl font-extrabold text-black">{title}</div>
+            <div className="mt-1 text-sm font-semibold text-black/70">{subtitle}</div>
           </div>
 
           <div className="mt-5 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/10">
             <div className="h-[220px] w-full">
-              <MapContainer
-                center={center}
-                zoom={15}
-                className="h-full w-full"
-                zoomControl={false}
-              >
-                <MapAutoFix center={center} path={path} />
+              <MapContainer center={center} zoom={15} className="h-full w-full" zoomControl={false}>
+                <MapAutoFix center={center} points={allPoints} />
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                {pos && <Marker position={[pos.lat, pos.lng]} />}
-                {path.length >= 2 && (
+                {pos && <Marker position={[pos.lat, pos.lng]} icon={runnerIcon} />}
+                {polylinePositions.length > 0 && (
                   <Polyline
                     positions={polylinePositions}
                     pathOptions={{ color: "#22c55e", weight: 7, opacity: 0.95 }}
@@ -643,45 +623,17 @@ export default function OutdoorRun() {
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <StatCard
-              icon="⚡"
-              title="Pace"
-              value={paceText.replace("/km", "")}
-              suffix="/km"
-              tone="green"
-            />
-            <StatCard
-              icon="📍"
-              title="Distance"
-              value={distanceKm.toFixed(2)}
-              suffix="km"
-              tone="slate"
-            />
-            <StatCard
-              icon="🕒"
-              title="Time"
-              value={formatTime(elapsedMs)}
-              suffix=""
-              tone="slate"
-            />
-            <StatCard
-              icon="❤"
-              title="Avg HR"
-              value={`${avgHrFinal}`}
-              suffix="bpm"
-              tone="rose"
-            />
+            <StatCard icon="⚡" title="Pace" value={paceText.replace("/km", "")} suffix="/km" tone="green" />
+            <StatCard icon="📍" title="Distance" value={distanceKm.toFixed(2)} suffix="km" tone="slate" />
+            <StatCard icon="🕒" title="Time" value={formatTime(elapsedMs)} suffix="" tone="slate" />
+            <StatCard icon="❤" title="Avg HR" value={`${avgHrFinal}`} suffix="bpm" tone="rose" />
           </div>
 
           <div className="mt-4 overflow-hidden rounded-3xl bg-gradient-to-r from-amber-400 to-orange-600 p-5 text-white shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-bold text-white/90">
-                  Calories Burned
-                </div>
-                <div className="mt-1 text-3xl font-extrabold">
-                  {calories} kcal
-                </div>
+                <div className="text-sm font-bold text-white/90">Calories Burned</div>
+                <div className="mt-1 text-3xl font-extrabold">{calories} kcal</div>
               </div>
               <div className="text-4xl">🔥</div>
             </div>
@@ -732,18 +684,12 @@ export default function OutdoorRun() {
           {/* Header row */}
           <div className="mx-auto flex w-full max-w-[460px] items-center justify-between">
             <div className="rounded-2xl bg-black/40 px-4 py-2 backdrop-blur-md ring-1 ring-white/15">
-              <div className="text-base font-semibold text-white">
-                Outdoor Run
-              </div>
+              <div className="text-base font-semibold text-white">Outdoor Run</div>
               <div className="mt-0.5 text-[11px] font-semibold text-white/70">
                 {pos ? (
                   <>
                     Accuracy {Math.round(pos.accuracy)}m •{" "}
-                    <span
-                      className={
-                        isPaused ? "text-amber-200" : "text-emerald-200"
-                      }
-                    >
+                    <span className={isPaused ? "text-amber-200" : "text-emerald-200"}>
                       {isPaused ? "Paused" : "Tracking"}
                     </span>
                   </>
@@ -772,17 +718,12 @@ export default function OutdoorRun() {
           />
         </div>
 
-        <MapContainer
-          center={center}
-          zoom={16}
-          className="h-full w-full"
-          zoomControl={false}
-        >
-          <MapAutoFix center={center} path={path} />
+        <MapContainer center={center} zoom={16} className="h-full w-full" zoomControl={false}>
+          <MapAutoFix center={center} points={allPoints} />
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <RecenterButton center={center} />
-          {pos && <Marker position={[pos.lat, pos.lng]} />}
-          {path.length >= 2 && (
+          {pos && <Marker position={[pos.lat, pos.lng]} icon={runnerIcon} />}
+          {polylinePositions.length > 0 && (
             <Polyline
               positions={polylinePositions}
               pathOptions={{ color: "#22c55e", weight: 7, opacity: 0.95 }}
@@ -802,35 +743,32 @@ export default function OutdoorRun() {
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <StatCard
-              icon="⚡"
-              title="Pace"
-              value={paceText.replace("/km", "")}
-              suffix="/km"
-              tone="green"
-            />
-            <StatCard
-              icon="❤"
-              title="Avg HR"
-              value={`${avgHr}`}
-              suffix="bpm"
-              tone="rose"
-            />
+            <StatCard icon="⚡" title="Pace" value={paceText.replace("/km", "")} suffix="/km" tone="green" />
+            <StatCard icon="❤" title="Avg HR" value={`${avgHr}`} suffix="bpm" tone="rose" />
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => setIsPaused((v) => !v)}
+              onClick={() => {
+                setIsPaused((v) => {
+                  const nextPaused = !v;
+
+                  // ✅ từ paused -> resume: bắt đầu segment mới
+                  if (v === true && nextPaused === false) {
+                    startNewSegmentRef.current = true;
+                  }
+
+                  return nextPaused;
+                });
+              }}
               className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-4 text-lg font-extrabold ring-1 ring-black/10 shadow-sm active:scale-[0.99]"
               disabled={savingRun}
             >
               <span
                 className={[
                   "inline-flex h-8 w-8 items-center justify-center rounded-xl",
-                  isPaused
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-amber-100 text-amber-700",
+                  isPaused ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700",
                 ].join(" ")}
               >
                 {isPaused ? "▶" : "⏸"}
@@ -847,16 +785,19 @@ export default function OutdoorRun() {
                 savingRun ? "bg-black/60" : "bg-[#111827]",
               ].join(" ")}
             >
-              <span className="relative z-10">
-                {savingRun ? "Saving..." : "Finish"}
-              </span>
+              <span className="relative z-10">{savingRun ? "Saving..." : "Finish"}</span>
               <span className="absolute inset-0 bg-gradient-to-r from-emerald-500/35 via-sky-500/25 to-transparent" />
             </button>
           </div>
 
           <div className="mt-4 text-center text-xs font-semibold text-black/45">
-            Tip: bấm ⦿ để đưa bản đồ về vị trí hiện tại
+            Tip: Tap ⦿ to recenter the map to your current location
           </div>
+
+          {/* ✅ Note quan trọng đúng yêu cầu của bạn */}
+          {/* <div className="mt-2 text-center text-[11px] font-semibold text-black/40">
+            Pause will not delete the old green segment — Resume will start a new green segment from the current location.
+          </div> */}
         </div>
       </div>
     </div>
