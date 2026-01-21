@@ -1,15 +1,14 @@
+const dotenv = require('dotenv');
+// Load biến môi trường ngay lập tức
+dotenv.config();
+
 const express = require('express');
 const morgan = require('morgan');
 const methodOverride = require('method-override');
-const dotenv = require('dotenv');
 const app = express();
 const route = require('./routes');
 const db = require('./config/db');
 const cors = require('cors');
-
-
-// Load biến môi trường
-dotenv.config();
 
 async function bootstrap() {
   // Kết nối DB

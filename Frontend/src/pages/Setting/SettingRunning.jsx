@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import planService from "../../services/planService";
+import "./SettingRunning.css";
 
 const DEFAULTS = {
   dailyKm: 3,
@@ -142,13 +143,16 @@ const SettingRunning = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4f6fb] px-4 pb-10 pt-6">
+      <div className="min-h-screen bg-[#f4f6fb] px-4 pb-10 pt-6 loading-container">
         <div className="mx-auto w-full max-w-[520px]">
-          <div className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-black/10">
-            <div className="text-sm font-extrabold text-black">
+          <div className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-black/10 loading-card">
+            <div className="inline-block">
+              <div className="animate-spin h-8 w-8 border-4 border-black/20 border-t-black/60 rounded-full"></div>
+            </div>
+            <div className="mt-3 text-sm font-extrabold text-black">
               Loading goals...
             </div>
-            <div className="mt-2 text-sm font-semibold text-black/55">
+            <div className="mt-1 text-sm font-semibold text-black/55">
               Please wait a moment.
             </div>
           </div>
@@ -158,8 +162,8 @@ const SettingRunning = () => {
   }
 
   return (
-    <div className="min-h-screen px-4 pb-10 pt-6">
-      <div className="mx-auto w-full max-w-[520px]">
+    <div className="min-h-screen px-4 pb-10 pt-6 setting-running-container">
+      <div className="mx-auto w-full max-w-[520px] setting-content">
         {/* Header */}
         <div className="flex items-center justify-center">
           {/* <button
@@ -183,7 +187,7 @@ const SettingRunning = () => {
         </div>
 
         {/* Info card */}
-        <div className="mt-4 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-black/10">
+        <div className="mt-4 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-black/10 info-card">
           <div className="flex items-start gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-50 text-emerald-700">
               🎯
@@ -204,7 +208,7 @@ const SettingRunning = () => {
         </div>
 
         {/* Goal cards */}
-        <div className="mt-4 grid gap-3">
+        <div className="mt-4 grid gap-3 goal-cards-grid">
           <GoalCard
             title="Daily goal"
             subtitle="Kilometers you want to run each day"
@@ -249,11 +253,11 @@ const SettingRunning = () => {
         </div>
 
         {/* Actions */}
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-5 grid grid-cols-2 gap-3 actions-grid">
           <button
             type="button"
             onClick={onReset}
-            className="rounded-2xl bg-white px-4 py-4 text-base font-extrabold text-black shadow-sm ring-1 ring-black/12 active:scale-[0.99]"
+            className="rounded-2xl bg-white px-4 py-4 text-base font-extrabold text-black shadow-sm ring-1 ring-black/12 active:scale-[0.99] action-button reset-button hover:shadow-md hover:ring-black/20 transition-all"
           >
             Reset
           </button>
@@ -261,7 +265,7 @@ const SettingRunning = () => {
           <button
             type="button"
             onClick={onSave}
-            className="rounded-2xl bg-[#aeead0] px-4 py-4 text-base font-extrabold text-black shadow-sm ring-1 ring-black/10 active:scale-[0.99]"
+            className="rounded-2xl bg-[#aeead0] px-4 py-4 text-base font-extrabold text-black shadow-sm ring-1 ring-black/10 active:scale-[0.99] action-button save-button hover:shadow-md hover:opacity-90 transition-all"
           >
             Save
           </button>
@@ -324,7 +328,10 @@ function GoalCard({
   };
 
   return (
-    <div className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-black/10">
+    <div className={[
+      "rounded-3xl bg-white p-4 shadow-sm ring-1 ring-black/10",
+      "goal-card transition-all duration-300"
+    ].join(" ")}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div
@@ -362,7 +369,7 @@ function GoalCard({
           step={step}
           value={safeValue}
           onChange={(e) => onInput(e.target.value)}
-          className={["w-full", t.bar].join(" ")}
+          className={["w-full slider-input", t.bar].join(" ")}
         />
 
         <div className="mt-3 flex items-center justify-between gap-3">
@@ -379,7 +386,7 @@ function GoalCard({
               step={step}
               value={safeValue}
               onChange={(e) => onInput(e.target.value)}
-              className="w-28 rounded-2xl border border-black/10 bg-[#f4f6fb] px-3 py-2 text-right text-sm font-extrabold text-black outline-none focus:ring-2 focus:ring-black/10"
+              className="w-28 rounded-2xl border border-black/10 bg-[#f4f6fb] px-3 py-2 text-right text-sm font-extrabold text-black outline-none focus:ring-2 focus:ring-black/10 number-input transition-all"
             />
             <div className="text-sm font-bold text-black/60">{unit}</div>
           </div>
@@ -391,13 +398,13 @@ function GoalCard({
       </div>
 
       {quick?.length ? (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2 quick-buttons">
           {quick.map((q) => (
             <button
               key={q}
               type="button"
               onClick={() => onInput(q)}
-              className="rounded-2xl bg-black/5 px-3 py-2 text-xs font-extrabold text-black/70 ring-1 ring-black/10 active:scale-[0.99]"
+              className="rounded-2xl bg-black/5 px-3 py-2 text-xs font-extrabold text-black/70 ring-1 ring-black/10 active:scale-[0.99] quick-btn hover:bg-black/10 hover:ring-black/15 transition-all"
             >
               {q} {unit}
             </button>

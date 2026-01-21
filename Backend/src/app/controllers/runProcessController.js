@@ -1,5 +1,55 @@
 const RunProcess = require("../models/RunProcess");
 
+/* ===================== Time helpers (Vietnam UTC+7) ===================== */
+function toVietnamDate(date = new Date()) {
+  const utcTime = date.getTime() + date.getTimezoneOffset() * 60000;
+  return new Date(utcTime + 7 * 60 * 60000);
+}
+
+function startOfDayVN(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function endOfDayVN(d) {
+  const x = new Date(d);
+  x.setHours(23, 59, 59, 999);
+  return x;
+}
+
+function startOfWeekMondayVN(d) {
+  const x = new Date(d);
+  const day = x.getDay();
+  const diffToMon = (day + 6) % 7;
+  x.setDate(x.getDate() - diffToMon);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function endOfWeekSundayVN(d) {
+  const s = startOfWeekMondayVN(d);
+  const e = new Date(s);
+  e.setDate(e.getDate() + 6);
+  e.setHours(23, 59, 59, 999);
+  return e;
+}
+
+function startOfMonthVN(d) {
+  const x = new Date(d);
+  x.setDate(1);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function endOfMonthVN(d) {
+  const x = new Date(d);
+  x.setMonth(x.getMonth() + 1, 1);
+  x.setHours(0, 0, 0, 0);
+  x.setMilliseconds(x.getMilliseconds() - 1);
+  return x;
+}
+
 const RunProcessController = {
   //Hàm tạo mới một RunProcess
   createRunProcess: async (req, res) => {
@@ -173,6 +223,68 @@ const RunProcessController = {
       });
     } catch (error) {
       console.error("Error retrieving run process:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  },
+
+  // GET /run-processes/stats/overview?period=week
+  // period: week, month
+  getStatsOverview: async (req, res) => {
+    try {
+      const userId = req.user._id;
+      const { period } = req.query;
+      const vnNow = toVietnamDate(new Date());
+
+      let startDate, endDate;
+
+      if (period === "month") {
+        startDate = startOfMonthVN(vnNow);
+        endDate = endOfMonthVN(vnNow);
+      } else {
+        // default: week
+        startDate = startOfWeekMondayVN(vnNow);
+        endDate = endOfWeekSundayVN(vnNow);
+      }
+
+      const runProcesses = await RunProcess.find({
+        userId,
+        startedAt: { $gte: startDate, $lte: endDate },
+      });
+
+      // Calculate stats
+      const stats = {
+        totalDistance: 0,
+        totalRuns: runProcesses.length,
+        totalTimeElapsed: 0, // in seconds
+      };
+
+      runProcesses.forEach((run) => {
+        stats.totalDistance += run.distance || 0;
+        stats.totalTimeElapsed += run.timeElapsed || 0;
+      });
+
+      // Convert timeElapsed to HH:MM format
+      const hours = Math.floor(stats.totalTimeElapsed / 3600);
+      const minutes = Math.floor((stats.totalTimeElapsed % 3600) / 60);
+      const timeFormatted = `${hours}H:${minutes}M`;
+
+      return res.status(200).json({
+        success: true,
+        message: "Stats overview retrieved successfully",
+        data: {
+          period,
+          totalDistance: stats.totalDistance.toFixed(2),
+          totalRuns: stats.totalRuns,
+          totalTimeElapsed: timeFormatted,
+          startDate,
+          endDate,
+        },
+      });
+    } catch (error) {
+      console.error("Error retrieving stats overview:", error);
       return res.status(500).json({
         success: false,
         message: "Internal server error",

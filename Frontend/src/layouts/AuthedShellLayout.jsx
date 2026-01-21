@@ -3,12 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   FiBarChart2,
   FiBell,
-  FiCamera,
   FiHome,
-  FiSearch,
+  FiMessageCircle,
   FiSettings,
-  FiUser,
 } from "react-icons/fi";
+import { FaPersonRunning } from "react-icons/fa6";
 import ROUTE_PATH from "../constants/routePath";
 import AuthService from "../services/authen";
 
@@ -136,16 +135,21 @@ export default function AuthedShellLayout({ children }) {
         <button
           className="app-navBtn"
           type="button"
-          aria-label="Camera"
+          aria-label="Run"
           onClick={() => navigate(ROUTE_PATH.NEW_RUN)}
         >
-          <FiCamera />
+          <FaPersonRunning />
         </button>
         <button className="app-navBtn" type="button" aria-label="Stats">
           <FiBarChart2 />
         </button>
-        <button className="app-navBtn" type="button" aria-label="Profile">
-          <FiUser />
+        <button
+          className="app-navBtn"
+          type="button"
+          aria-label="Chat"
+          onClick={() => navigate(ROUTE_PATH.AI_CHAT)}
+        >
+          <FiMessageCircle />
         </button>
       </nav>
 

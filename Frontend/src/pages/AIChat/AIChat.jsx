@@ -10,6 +10,7 @@ const AIChat = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Tự động scroll xuống tin nhắn mới nhất
@@ -65,14 +66,11 @@ const AIChat = () => {
   };
 
   const handleClearChat = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử chat?')) {
-      return;
-    }
-
     try {
       const response = await aiChatService.clearMessages();
       if (response.success) {
         setMessages([]);
+        setShowClearConfirm(false);
       }
     } catch (err) {
       console.error('Failed to clear messages:', err);
@@ -109,7 +107,7 @@ const AIChat = () => {
         {messages.length > 0 && (
           <button 
             className="clear-chat-btn" 
-            onClick={handleClearChat}
+            onClick={() => setShowClearConfirm(true)}
             title="Xóa lịch sử chat"
           >
             🗑️
@@ -167,6 +165,34 @@ const AIChat = () => {
       {error && (
         <div className="error-message">
           ⚠️ {error}
+        </div>
+      )}
+
+      {showClearConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-dialog">
+            <div className="modal-header">
+              <h2>Xóa lịch sử chat?</h2>
+            </div>
+            <div className="modal-body">
+              <p>Bạn có chắc chắn muốn xóa toàn bộ lịch sử cuộc trò chuyện?</p>
+              <p className="modal-warning">⚠️ Hành động này không thể hoàn tác</p>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="modal-btn modal-btn-cancel"
+                onClick={() => setShowClearConfirm(false)}
+              >
+                Hủy
+              </button>
+              <button 
+                className="modal-btn modal-btn-confirm"
+                onClick={handleClearChat}
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
