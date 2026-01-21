@@ -1,6 +1,7 @@
 import React from "react";
 import ROUTE_PATH from "../../constants/routePath";
 import { useNavigate } from "react-router-dom";
+import "./NewRun.css";
 
 const NewRun = () => {
   const recentRuns = [
@@ -9,32 +10,32 @@ const NewRun = () => {
     { distance: "7.1 km", time: "45:20", ago: "6 days ago", pace: "6:23 /km" },
   ];
 
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto w-full max-w-[420px] px-4 py-4">
+    <div className="min-h-screen new-run-container">
+      <div className="mx-auto w-full max-w-[420px] px-4 py-4 new-run-content">
         {/* Start New Run */}
         <button
           type="button"
-          className="w-full rounded-2xl bg-[#AEEAD0] px-4 py-7 text-center shadow-sm active:scale-[0.99]"
+          className="w-full rounded-2xl bg-[#AEEAD0] px-4 py-7 text-center shadow-sm active:scale-[0.99] start-button hover:shadow-md hover:opacity-90 transition-all"
           onClick={() => navigate(ROUTE_PATH.OUTDOOR_RUN)}
         >
-          <div className="mx-auto mb-2 grid h-10 w-10 place-items-center rounded-full bg-black/10">
+          <div className="mx-auto mb-2 grid h-10 w-10 place-items-center rounded-full bg-black/10 play-icon">
             <span className="text-xl leading-none">▶</span>
           </div>
           <div className="text-xl font-semibold text-black">Start New Run</div>
         </button>
 
         {/* This Week */}
-        <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-black/80">
+        <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-black/80 this-week-label">
           <span className="text-lg">📅</span>
           <span>This Week</span>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-2 gap-3 stats-grid">
           {/* Total Distance */}
-          <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm stat-card hover:shadow-md hover:border-black/20 transition-all">
             <div className="flex items-center gap-2 text-sm font-medium text-black/60">
               <span className="text-base">📈</span>
               <span>Total Distance</span>
@@ -46,7 +47,7 @@ const NewRun = () => {
           </div>
 
           {/* Total time */}
-          <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm stat-card hover:shadow-md hover:border-black/20 transition-all">
             <div className="flex items-center gap-2 text-sm font-medium text-black/60">
               <span className="text-base">🕒</span>
               <span>Total time</span>
@@ -59,22 +60,23 @@ const NewRun = () => {
         </div>
 
         {/* Recent Runs header */}
-        <div className="mt-8 flex items-end justify-between">
+        <div className="mt-8 flex items-end justify-between recent-runs-header">
           <h3 className="text-xl font-semibold text-black">Recent Runs</h3>
           <button
             type="button"
-            className="text-sm font-medium text-black/50 hover:text-black/70"
+            className="text-sm font-medium text-black/50 hover:text-black/70 transition-colors"
           >
             See all
           </button>
         </div>
 
         {/* Recent Runs list */}
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 space-y-3 recent-runs-list">
           {recentRuns.map((run, idx) => (
             <div
               key={idx}
-              className="flex items-center justify-between rounded-2xl border border-black/10 bg-white p-4 shadow-sm"
+              className="flex items-center justify-between rounded-2xl border border-black/10 bg-white p-4 shadow-sm run-card hover:shadow-md hover:border-black/20 hover:-translate-y-1 transition-all"
+              style={{ animationDelay: `${0.4 + idx * 0.08}s` }}
             >
               <div>
                 <div className="text-base font-semibold text-black">

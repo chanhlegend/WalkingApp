@@ -1,18 +1,51 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { FiChevronDown, FiEdit2, FiBookmark } from "react-icons/fi";
+import planService from "../../services/planService";
+import runProcessService from "../../services/runProcessService";
+import ROUTE_PATH from "../../constants/routePath";
+import "./Home.css";
 
 export default function Home() {
+  const navigate = useNavigate();
   const [range, setRange] = useState("this_week");
+  const [goals, setGoals] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      
+      // Fetch goals
+      const goalsResult = await planService.getPlansByDate(new Date().toISOString().split('T')[0]);
+      if (goalsResult.success && goalsResult.data) {
+        setGoals(goalsResult.data);
+      }
+
+      // Fetch stats based on range
+      const period = range === "this_week" ? "week" : "month";
+      const statsResult = await runProcessService.getStatsOverview(period);
+      if (statsResult.success && statsResult.data) {
+        setStats(statsResult.data);
+      }
+
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [range]);
 
   return (
-    <>
+    <div className="home-container">
       {/* Quick overview */}
-      <section className="bg-white border border-black/20 rounded-[14px] p-3">
-        <div className="flex items-center justify-between gap-2.5 mb-2.5">
+      <section className="home-card quick-overview-card">
+        <div className="flex items-center justify-between gap-2.5 mb-3">
           <div className="font-extrabold text-[14px]">Quick overview</div>
 
           <button
-            className="h-8 rounded-[10px] border border-black/15 bg-white/70 px-2.5 flex items-center gap-2 cursor-pointer"
+            className="h-8 rounded-[10px] border border-black/15 bg-white/70 px-2.5 flex items-center gap-2 cursor-pointer hover:bg-white/90 transition-colors"
             type="button"
             onClick={() =>
               setRange((r) => (r === "this_week" ? "this_month" : "this_week"))
@@ -25,223 +58,233 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-2.5 max-[380px]:grid-cols-1">
-          <div>
-            <div className="font-black text-[20px] tracking-[.01em] md:text-[22px]">
-              12.4 KM
+        <div className="grid grid-cols-3 gap-3 max-[380px]:gap-2 max-[380px]:grid-cols-1">
+          <div className="stat-card">
+            <div className="font-black text-[24px] tracking-[.01em] text-[var(--primary)]">
+              {stats ? `${stats.totalDistance} KM` : "-- KM"}
             </div>
-            <div className="text-black/60 text-[12px] mt-1">This week</div>
-          </div>
-
-          <div>
-            <div className="font-black text-[20px] tracking-[.01em] md:text-[22px]">
-              4 RUNS
-            </div>
-            <div className="text-black/60 text-[12px] mt-1">Total</div>
-          </div>
-
-          <div>
-            <div className="font-black text-[20px] tracking-[.01em] md:text-[22px]">
-              2H:30M
-            </div>
-            <div className="text-black/60 text-[12px] mt-1">Hours activate</div>
-          </div>
-        </div>
-
-        <input type="hidden" value={range} onChange={() => {}} />
-      </section>
-
-      {/* Monthly goal */}
-      <section className="bg-white border border-black/20 rounded-[14px] p-3 mt-3">
-        <div className="flex items-center justify-between gap-2.5 mb-2.5">
-          <div className="font-extrabold text-[14px]">Monthly goal</div>
-
-          <button
-            className="h-8 rounded-[10px] border border-black/15 bg-white/70 px-2.5 flex items-center gap-2 cursor-pointer font-semibold"
-            type="button"
-          >
-            <span>Change</span>
-            <FiEdit2 />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5 min-w-[128px]">
-            <div
-              className="w-7 h-7 rounded-full bg-black/10"
-              aria-hidden="true"
-            />
-            <div className="font-black">
-              <span className="text-[16px]">18</span>
-              <span className="opacity-50 mx-[2px]">/</span>
-              <span className="text-[14px]">100 KM</span>
+            <div className="text-black/60 text-[12px] mt-1.5">
+              {range === "this_week" ? "This week" : "This month"}
             </div>
           </div>
 
-          <div
-            className="flex-1 h-2 rounded-full bg-black/10 overflow-hidden"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={18}
-          >
-            <div
-              className="h-full rounded-full bg-black/55"
-              style={{ width: "18%" }}
-            />
+          <div className="stat-card">
+            <div className="font-black text-[24px] tracking-[.01em] text-[var(--primary)]">
+              {stats ? `${stats.totalRuns} RUNS` : "-- RUNS"}
+            </div>
+            <div className="text-black/60 text-[12px] mt-1.5">Total</div>
+          </div>
+
+          <div className="stat-card">
+            <div className="font-black text-[24px] tracking-[.01em] text-[var(--primary)]">
+              {stats ? stats.totalTimeElapsed : "--:--"}
+            </div>
+            <div className="text-black/60 text-[12px] mt-1.5">Hours active</div>
           </div>
         </div>
       </section>
 
-      {/* Recent activities */}
-      <section className="mt-3">
-        <div className="flex items-center justify-between my-1 mx-0.5 mb-2.5">
-          <div className="font-black text-[18px]">Recent activities</div>
+      {/* Update Premium */}
+      <section className="home-card premium-card">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1">
+            <div className="font-black text-[16px] mb-1">✨ Upgrade Premium</div>
+            <div className="text-black/60 text-[13px] leading-[1.4]">
+              Use our AI chat to get personalized health and fitness advice tailored to your goals.
+            </div>
+          </div>
           <button
-            className="border-0 bg-transparent text-black/60 cursor-pointer font-semibold"
+            className="h-10 px-4 rounded-xl border border-transparent bg-[linear-gradient(135deg,#ffd700,#ffed4e)] font-bold text-[13px] cursor-pointer hover:opacity-90 transition-opacity shadow-sm flex-shrink-0 whitespace-nowrap"
             type="button"
+            onClick={() => setShowUpgradeModal(true)}
           >
-            See all
+            Upgrade Now
           </button>
-        </div>
-
-        <div className="bg-white border border-black/20 rounded-[14px] overflow-hidden">
-          <div className="px-3 pt-3 pb-1.5">
-            <div className="font-black text-[16px]">Morning run</div>
-            <div className="text-black/60 text-[12px] mt-0.5">
-              Today, 7:30 AM
-            </div>
-          </div>
-
-          <div className="px-3 pt-2.5 pb-3 grid grid-cols-3 gap-2.5">
-            <div>
-              <div className="font-black text-[14px]">5 KM</div>
-              <div className="text-black/60 text-[11px] mt-0.5">Distance</div>
-            </div>
-            <div>
-              <div className="font-black text-[14px]">33.11/KM</div>
-              <div className="text-black/60 text-[11px] mt-0.5">Pace</div>
-            </div>
-            <div>
-              <div className="font-black text-[14px]">30M</div>
-              <div className="text-black/60 text-[11px] mt-0.5">Time</div>
-            </div>
-          </div>
-
-          <div
-            className="h-[140px] md:h-[180px] bg-gradient-to-r from-black/10 to-black/5"
-            aria-hidden="true"
-          />
         </div>
       </section>
 
       {/* Program card */}
-      <section className="bg-white border border-black/20 rounded-[14px] mt-3 p-0 overflow-hidden">
-        <div className="h-[120px] bg-black/10 flex items-center justify-center">
-          <div className="w-[104px] h-[104px] rounded-full bg-white/75 border border-black/15 flex flex-col items-center justify-center font-black text-[22px]">
+      <section className="home-card program-card">
+        <div className="h-[120px] bg-gradient-to-br from-black/5 to-black/10 flex items-center justify-center rounded-t-xl">
+          <div className="w-[104px] h-[104px] rounded-full bg-white/80 border border-black/15 flex flex-col items-center justify-center font-black text-[22px] shadow-sm">
             21K
-            <div className="text-[10px] font-extrabold mt-0.5 tracking-[.02em]">
+            <div className="text-[10px] font-extrabold mt-1 tracking-[.02em]">
               HALF MARATHON
             </div>
           </div>
         </div>
 
-        <div className="p-3">
-          <div className="flex justify-between gap-2.5 items-start">
+        <div className="p-4">
+          <div className="flex justify-between gap-2.5 items-start mb-3">
             <div>
               <div className="font-black text-[18px]">First Half Marathon</div>
-              <div className="text-black/60 text-[12px] mt-1.5 leading-[1.35]">
-                This 21.1 km workout is designed for runners building toward
-                their first half marathon.
+              <div className="text-black/60 text-[12px] mt-1.5 leading-[1.4]">
+                This 21.1 km workout is designed for runners building toward their first half marathon.
               </div>
             </div>
 
-            <div className="h-6 px-2.5 rounded-[10px] border border-black/15 bg-white/70 text-[12px] font-bold flex items-center whitespace-nowrap">
+            <div className="h-7 px-3 rounded-[10px] border border-black/15 bg-white/70 text-[11px] font-bold flex items-center whitespace-nowrap flex-shrink-0">
               Beginners
             </div>
           </div>
 
           <button
-            className="mt-2.5 w-full h-11 rounded-xl border border-transparent bg-[var(--primary)] font-extrabold cursor-pointer"
+            className="w-full h-11 rounded-xl border border-transparent bg-[var(--primary)] font-extrabold cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
             type="button"
+            onClick={() => navigate(ROUTE_PATH.NEW_RUN)}
           >
             Start now
           </button>
         </div>
       </section>
 
-      {/* Challenges */}
-      <section className="mt-3">
-        <div className="flex items-center justify-between my-1 mx-0.5 mb-2.5">
-          <div className="font-black text-[18px]">Challenges</div>
+      {/* Goals */}
+      <section className="mt-6">
+        <div className="flex items-center justify-between my-1 mx-0.5 mb-4">
+          <div className="font-black text-[18px]">Your Goals</div>
           <button
-            className="border-0 bg-transparent text-black/60 cursor-pointer font-semibold"
+            className="border-0 bg-transparent text-black/60 cursor-pointer font-semibold hover:text-black/90 transition-colors"
             type="button"
           >
             See all
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5 max-[380px]:grid-cols-1">
-          {/* Card 1 */}
-          <div className="bg-white border border-black/20 rounded-[14px] p-2.5 flex flex-col gap-2">
-            <div className="flex justify-between items-center">
-              <div className="h-7 px-2.5 rounded-full border border-black/15 bg-white/85 text-[11px] font-black flex items-center">
-                50 KM
-              </div>
-
-              <button
-                className="w-[34px] h-[34px] rounded-full border border-black/15 bg-white/80 grid place-items-center cursor-pointer"
-                type="button"
-                aria-label="Bookmark"
-              >
-                <FiBookmark className="w-4 h-4" />
-              </button>
+        {loading ? (
+          <div className="text-center py-12 text-black/60">
+            <div className="inline-block">
+              <div className="animate-spin h-8 w-8 border-4 border-black/20 border-t-black/60 rounded-full"></div>
             </div>
-
-            <div className="font-black text-[13px] leading-[1.25]">
-              Run 50 km in 10 days
-            </div>
-            <div className="text-black/60 text-[11px]">May 2 - May 12</div>
-
-            <button
-              className="w-full h-11 rounded-xl border border-transparent bg-[var(--primary)] font-extrabold cursor-pointer"
-              type="button"
-            >
-              Start now
-            </button>
+            <p className="mt-2">Loading goals...</p>
           </div>
-
-          {/* Card 2 */}
-          <div className="bg-white border border-black/20 rounded-[14px] p-2.5 flex flex-col gap-2">
-            <div className="flex justify-between items-center">
-              <div className="h-7 px-2.5 rounded-full border border-black/15 bg-white/85 text-[11px] font-black flex items-center">
-                5 DAYS
+        ) : goals ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-4xl mx-auto">
+            {/* Daily Goal */}
+            {goals.daily && (
+              <div className="goal-card goal-card-daily">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="h-7 px-3 rounded-full border border-black/15 bg-blue-50 text-[11px] font-black text-blue-600 flex items-center">
+                    DAILY
+                  </div>
+                  <button
+                    className="w-[32px] h-[32px] rounded-full border border-black/15 bg-white hover:bg-black/5 grid place-items-center cursor-pointer transition-colors"
+                    type="button"
+                    aria-label="Bookmark"
+                  >
+                    <FiBookmark className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="font-black text-[15px] leading-[1.3] mb-2">
+                  {goals.daily.name}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-[24px] font-black text-[var(--primary)]">
+                    {goals.daily.totalDistance}
+                  </div>
+                  <div className="text-black/60 text-[12px]">KM</div>
+                </div>
               </div>
+            )}
 
-              <button
-                className="w-[34px] h-[34px] rounded-full border border-black/15 bg-white/80 grid place-items-center cursor-pointer"
-                type="button"
-                aria-label="Bookmark"
+            {/* Weekly Goal */}
+            {goals.weekly && (
+              <div className="goal-card goal-card-weekly">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="h-7 px-3 rounded-full border border-black/15 bg-purple-50 text-[11px] font-black text-purple-600 flex items-center">
+                    WEEKLY
+                  </div>
+                  <button
+                    className="w-[32px] h-[32px] rounded-full border border-black/15 bg-white hover:bg-black/5 grid place-items-center cursor-pointer transition-colors"
+                    type="button"
+                    aria-label="Bookmark"
+                  >
+                    <FiBookmark className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="font-black text-[15px] leading-[1.3] mb-2">
+                  {goals.weekly.name}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-[24px] font-black text-[var(--primary)]">
+                    {goals.weekly.totalDistance}
+                  </div>
+                  <div className="text-black/60 text-[12px]">KM</div>
+                </div>
+              </div>
+            )}
+
+            {/* Monthly Goal */}
+            {goals.monthly && (
+              <div className="goal-card goal-card-monthly">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="h-7 px-3 rounded-full border border-black/15 bg-orange-50 text-[11px] font-black text-orange-600 flex items-center">
+                    MONTHLY
+                  </div>
+                  <button
+                    className="w-[32px] h-[32px] rounded-full border border-black/15 bg-white hover:bg-black/5 grid place-items-center cursor-pointer transition-colors"
+                    type="button"
+                    aria-label="Bookmark"
+                  >
+                    <FiBookmark className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="font-black text-[15px] leading-[1.3] mb-2">
+                  {goals.monthly.name}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-[24px] font-black text-[var(--primary)]">
+                    {goals.monthly.totalDistance}
+                  </div>
+                  <div className="text-black/60 text-[12px]">KM</div>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-black/60">No goals found</div>
+        )}
+      </section>
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div className="modal-overlay">
+          <div className="modal-dialog">
+            <div className="modal-header">
+              <h2>🌟 Upgrade to Premium</h2>
+            </div>
+            <div className="modal-body">
+              <div className="premium-features">
+                <div className="premium-price">₩299,000 / 1 Month</div>
+                <div className="premium-features-list">
+                  <div className="feature-item">✓ Unlimited AI Health Consulting</div>
+                  <div className="feature-item">✓ Advanced Analytics & Insights</div>
+                  <div className="feature-item">✓ Personalized Training Plans</div>
+                  <div className="feature-item">✓ Priority Support 24/7</div>
+                  <div className="feature-item">✓ Ad-free Experience</div>
+                </div>
+              </div>
+              <p className="modal-warning">Auto-renews monthly. Cancel anytime.</p>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="modal-btn modal-btn-cancel"
+                onClick={() => setShowUpgradeModal(false)}
               >
-                <FiBookmark className="w-4 h-4" />
+                Cancel
+              </button>
+              <button 
+                className="modal-btn modal-btn-upgrade"
+                onClick={() => {
+                  // TODO: Handle upgrade payment
+                  setShowUpgradeModal(false);
+                }}
+              >
+                Upgrade Now
               </button>
             </div>
-
-            <div className="font-black text-[13px] leading-[1.25]">
-              Run every day for 5 days
-            </div>
-            <div className="text-black/60 text-[11px]">May 2 - May 12</div>
-
-            <button
-              className="w-full h-11 rounded-xl border border-transparent bg-[var(--primary)] font-extrabold cursor-pointer"
-              type="button"
-            >
-              Start now
-            </button>
           </div>
         </div>
-      </section>
-    </>
+      )}
+    </div>
   );
 }

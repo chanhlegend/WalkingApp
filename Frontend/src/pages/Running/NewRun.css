@@ -1,0 +1,226 @@
+.new-run-container {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.new-run-content {
+  animation: fadeIn 0.8s ease-out 0.1s both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Start button */
+.start-button {
+  animation: scaleIn 0.5s ease-out 0.1s both;
+  background: linear-gradient(135deg, #aeead0 0%, #a5e7ca 100%);
+  box-shadow: 0 4px 12px rgba(174, 234, 208, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.start-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.5s, height 0.5s;
+}
+
+.start-button:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+.start-button:hover {
+  box-shadow: 0 8px 20px rgba(174, 234, 208, 0.4);
+}
+
+.play-icon {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* This week label */
+.this-week-label {
+  animation: fadeIn 0.6s ease-out 0.2s both;
+}
+
+/* Stats grid */
+.stats-grid {
+  animation: fadeIn 0.6s ease-out 0.25s both;
+}
+
+.stat-card {
+  animation: slideUp 0.5s ease-out;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  position: relative;
+}
+
+.stat-card:nth-child(1) {
+  animation-delay: 0.25s;
+}
+
+.stat-card:nth-child(2) {
+  animation-delay: 0.35s;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), rgba(0, 0, 0, 0.1));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+  opacity: 0;
+}
+
+.stat-card:hover::before {
+  transform: scaleX(1);
+  opacity: 1;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Recent runs section */
+.recent-runs-header {
+  animation: fadeIn 0.6s ease-out 0.4s both;
+}
+
+.recent-runs-list {
+  animation: fadeIn 0.6s ease-out 0.45s both;
+}
+
+/* Run cards */
+.run-card {
+  animation: slideUp 0.5s ease-out both;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.run-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #3b82f6, rgba(59, 130, 246, 0.2));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.run-card:hover::before {
+  transform: scaleX(1);
+}
+
+.run-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Staggered animation for run cards */
+.run-card:nth-child(1) {
+  animation-delay: 0.4s;
+}
+
+.run-card:nth-child(2) {
+  animation-delay: 0.48s;
+}
+
+.run-card:nth-child(3) {
+  animation-delay: 0.56s;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stat-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .run-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+@media (max-width: 480px) {
+  .start-button {
+    padding: 1.5rem 1rem;
+  }
+
+  .stat-card,
+  .run-card {
+    animation-delay: 0s !important;
+  }
+
+  .start-button:hover {
+    box-shadow: 0 4px 12px rgba(174, 234, 208, 0.3);
+  }
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  background-color: rgba(174, 234, 208, 0.3);
+  color: inherit;
+}
