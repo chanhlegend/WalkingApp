@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 
 const PackgeSchema = new mongoose.Schema(
   {
-    userId: mongoose.Schema.Types.ObjectId('User'),
-    status: { type: String, ennum: [ 'valid', 'invalid'], required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    status: { type: String, enum: [ 'valid', 'invalid'], required: true, index: true },
     startedAt: { type: Date, required: true, index: true },
     endedAt: { type: Date, required: true, index: true },
   },

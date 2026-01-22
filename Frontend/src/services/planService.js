@@ -24,7 +24,7 @@ const planService = {
     } catch (error) {
       return {
         message:
-          error.response?.data?.message || "Failed to save goal settings 1111",
+          error.response?.data?.message || "Failed to save goal settings",
         success: error.response?.data?.success || false,
       };
     }

@@ -114,22 +114,22 @@ const SettingRunning = () => {
       return;
     }
 
-    const loadingId = toast.loading("Đang lưu setting...");
+    const loadingId = toast.loading("Saving settings...");
     try {
       const res = await planService.upsertGoalSettings(payload);
       toast.dismiss(loadingId);
 
       if (!res?.success) {
-        toast.error(res?.message || "Lưu thất bại");
+        toast.error(res?.message || "Save failed");
         return;
       }
 
       // ✅ KHÔNG lưu localStorage nữa
-      toast.success("✅ Setting thành công");
+      toast.success(" Setting successfully saved");
     } catch (e) {
       console.log(e);
       toast.dismiss(loadingId);
-      toast.error("Lưu thất bại");
+      toast.error("Save failed");
     }
   };
 
