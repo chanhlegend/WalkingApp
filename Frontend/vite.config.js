@@ -21,8 +21,8 @@ export default defineConfig({
         "apple-touch-icon.png",
       ],
       manifest: {
-        name: "My App",
-        short_name: "MyApp",
+        name: "Walking App",
+        short_name: "WalkingApp",
         description: "My React PWA App",
         start_url: "/",
         scope: "/",
