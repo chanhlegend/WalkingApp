@@ -29,6 +29,9 @@ const ROUTE_PATH = {
 	// Settings
 	SETTING_RUNNING: "/settings/running",
 
+	// Statistics
+	STATISTICS: "/statistics",
+
 	// AI Chat
 	AI_CHAT: "/ai-chat",
 };

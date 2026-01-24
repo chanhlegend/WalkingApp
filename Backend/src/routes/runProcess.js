@@ -8,5 +8,6 @@ router.use(requireAuth);
 router.post("/", runProcessController.createRunProcess);
 router.get("/by-date", runProcessController.getRunProcessesByDate);
 router.get("/stats/overview", runProcessController.getStatsOverview);
+router.get("/stats/dashboard", runProcessController.getStatsDashboard);
 module.exports = router;
 
