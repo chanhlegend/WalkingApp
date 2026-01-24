@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const EmailOtp = require("../models/EmailOtp");
+require("dotenv").config();
 
 function signToken(user) {
   const secret = process.env.JWT_SECRET || "dev-jwt-secret-change-me";
