@@ -23,6 +23,7 @@
     "dotenv": "^17.2.3",
     "file-saver": "^2.0.5",
     "leaflet": "^1.9.4",
+    "lucide-react": "^0.563.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hot-toast": "^2.6.0",

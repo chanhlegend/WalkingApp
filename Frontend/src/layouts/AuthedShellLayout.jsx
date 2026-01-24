@@ -24,7 +24,8 @@ function readSessionUser() {
 export default function AuthedShellLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [ready, setReady] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
   const [user, setUser] = useState(() => readSessionUser());
 
   useEffect(() => {
@@ -36,13 +37,23 @@ export default function AuthedShellLayout({ children }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const token = localStorage.getItem("token") || "";
-      if (!token) {
+      let token = "";
+      try {
+        token = localStorage.getItem("token") || "";
+      } catch {
+        token = "";
+      }
+
+      const authed = Boolean(token);
+      if (!cancelled) {
+        setIsAuthed(authed);
+        setAuthChecked(true);
+      }
+
+      if (!authed) {
         navigate(ROUTE_PATH.SIGNUP, { replace: true });
         return;
       }
-
-      setReady(true);
 
       try {
         const ensured = await AuthService.ensureSessionUser();
@@ -63,10 +74,32 @@ export default function AuthedShellLayout({ children }) {
   const active = useMemo(() => {
     const path = location.pathname;
     if (path === ROUTE_PATH.HOME) return "home";
+    if (path === ROUTE_PATH.SETTING_RUNNING) return "settings";
+    if (path === ROUTE_PATH.NEW_RUN || path === ROUTE_PATH.OUTDOOR_RUN) return "run";
+    if (path === ROUTE_PATH.STATISTICS) return "stats";
+    if (path === ROUTE_PATH.AI_CHAT) return "chat";
     return "";
   }, [location.pathname]);
 
-  if (!ready) return null;
+  if (!authChecked || !isAuthed) {
+    return (
+      <div className="app-page">
+        <div className="app-shell">
+          <div
+            style={{
+              padding: 18,
+              textAlign: "center",
+              color: "rgba(0,0,0,.65)",
+              fontWeight: 700,
+            }}
+          >
+            Loading…
+          </div>
+        </div>
+        <style>{styles}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="app-page">
@@ -97,11 +130,7 @@ export default function AuthedShellLayout({ children }) {
               Logout
             </button>
 
-            <button
-              className="app-bell"
-              type="button"
-              aria-label="Notifications"
-            >
+            <button className="app-bell" type="button" aria-label="Notifications">
               <FiBell />
               <span className="app-badge" aria-hidden="true">
                 1
@@ -115,36 +144,45 @@ export default function AuthedShellLayout({ children }) {
 
       <nav className="app-footer" aria-label="Bottom navigation">
         <button
-          className={
-            active === "home" ? "app-navBtn app-navBtn--active" : "app-navBtn"
-          }
+          className={active === "home" ? "app-navBtn app-navBtn--active" : "app-navBtn"}
           type="button"
           aria-label="Home"
           onClick={() => navigate(ROUTE_PATH.HOME)}
         >
           <FiHome />
         </button>
+
         <button
-          className="app-navBtn"
+          className={
+            active === "settings" ? "app-navBtn app-navBtn--active" : "app-navBtn"
+          }
           type="button"
-          aria-label="Search"
+          aria-label="Settings"
           onClick={() => navigate(ROUTE_PATH.SETTING_RUNNING)}
         >
           <FiSettings />
         </button>
+
         <button
-          className="app-navBtn"
+          className={active === "run" ? "app-navBtn app-navBtn--active" : "app-navBtn"}
           type="button"
           aria-label="Run"
           onClick={() => navigate(ROUTE_PATH.NEW_RUN)}
         >
           <FaPersonRunning />
         </button>
-        <button className="app-navBtn" type="button" aria-label="Stats">
+
+        <button
+          className={active === "stats" ? "app-navBtn app-navBtn--active" : "app-navBtn"}
+          type="button"
+          aria-label="Stats"
+          onClick={() => navigate(ROUTE_PATH.STATISTICS)}
+        >
           <FiBarChart2 />
         </button>
+
         <button
-          className="app-navBtn"
+          className={active === "chat" ? "app-navBtn app-navBtn--active" : "app-navBtn"}
           type="button"
           aria-label="Chat"
           onClick={() => navigate(ROUTE_PATH.AI_CHAT)}
@@ -165,7 +203,7 @@ const styles = `
   --muted: #6b6b6b;
   --white: #ffffff;
   --border: rgba(0,0,0,.12);
-  --primary: #9fe3c9;
+  --primary: #A7E6CF;
   --footer-h: 64px;
 }
 
@@ -182,9 +220,16 @@ body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, 
   padding-bottom: calc(max(28px, env(safe-area-inset-bottom)) + var(--footer-h));
   display:flex;
   justify-content:center;
+
+  position: relative;   
+  z-index: 0;          
 }
 
-.app-shell{ width: min(420px, 100%); }
+.app-shell{ 
+  width: min(420px, 100%); 
+  position: relative;  
+  z-index: 1;          
+}
 
 .app-top{
   display:flex;
@@ -254,6 +299,7 @@ body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, 
   font-size: 13px;
 }
 
+/* ✅ FIX CLICK: add z-index + pointer-events */
 .app-footer{
   position: fixed;
   left: 0;
@@ -265,6 +311,9 @@ body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, 
   justify-content:center;
   padding: 0 max(14px, env(safe-area-inset-left)) env(safe-area-inset-bottom) max(14px, env(safe-area-inset-right));
   background: var(--primary);
+
+  z-index: 9999;        
+  pointer-events: auto; 
 }
 
 .app-footer::before{
@@ -277,13 +326,7 @@ body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, 
 
 .app-footer > *{ position: relative; }
 
-.app-footer{
-  justify-content: center;
-}
-
-.app-footer{
-  gap: 22px;
-}
+.app-footer{ gap: 22px; }
 
 .app-navBtn{
   width: 44px;
@@ -295,12 +338,17 @@ body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, 
   display:grid;
   place-items:center;
   cursor:pointer;
+
+  touch-action: manipulation; /* ✅ NEW: mobile click */
 }
 
 .app-navBtn svg{ width: 20px; height: 20px; }
 
 .app-navBtn--active{
   color: #000;
+  background: rgba(255,255,255,.60);
+  box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  outline: 1px solid rgba(0,0,0,.10);
 }
 
 @media (min-width: 768px){

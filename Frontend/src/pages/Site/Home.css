@@ -245,7 +245,8 @@ button[aria-label="Bookmark"]:active::after {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
+  /* Keep bottom navigation clickable */
+  bottom: calc(var(--footer-h, 64px) + env(safe-area-inset-bottom));
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;

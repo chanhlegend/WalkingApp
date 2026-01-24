@@ -36,7 +36,7 @@ export default function Signup() {
   }, [navigate]);
 
   const handleGoogle = () => {
-    window.location.href = `${BACKEND_ORIGIN}/auth/google`;
+    AuthService.loginWithGoogle();
   };
 
   const handleEmail = () => {
