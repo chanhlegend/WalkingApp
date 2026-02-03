@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Bell, ChevronDown, Download, TrendingUp, Zap } from "lucide-react";
+import { ChevronDown, TrendingUp, Zap } from "lucide-react";
 import runProcessService from "../../services/runProcessService";
 import {
   CartesianGrid,
@@ -11,6 +11,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+import { useNavigate } from "react-router-dom";
+import ROUTE_PATH from "../../constants/routePath";
 
 const RANGES = [
   { key: "today", label: "Today" },
@@ -56,6 +59,8 @@ export default function StatsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [stats, setStats] = useState(EMPTY_DATA);
+
+  const navigate = useNavigate();
 
   const data = useMemo(() => stats || EMPTY_DATA, [stats]);
   const hasRuns = (data?.runs || 0) > 0;
@@ -327,28 +332,16 @@ export default function StatsPage() {
                   </p>
                 </div>
               </div>
-
-              <p className="mb-4 text-xs text-black/60">Est. completion in 12 days</p>
-
               <div className="flex gap-2">
                 <button
                   type="button"
                   className="flex-1 rounded-lg py-2.5 font-semibold transition-all"
                   style={{ backgroundColor: "#A7E6CF", color: "black" }}
                   onClick={() => {
-                    // TODO: navigate to plan
+                    navigate(ROUTE_PATH.SETTING_RUNNING);
                   }}
                 >
                   View plan
-                </button>
-                <button
-                  type="button"
-                  className="flex-1 rounded-lg border border-black/15 py-2.5 font-semibold transition-all hover:bg-black/5"
-                  onClick={() => {
-                    // TODO: edit plan
-                  }}
-                >
-                  Edit
                 </button>
               </div>
             </div>

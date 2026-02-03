@@ -1,10 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Polyline,
+  useMap,
+} from "react-leaflet";
 import L from "leaflet";
 import ROUTE_PATH from "../../constants/routePath";
 import { useNavigate } from "react-router-dom";
 import planService from "../../services/planService";
 import runProcessService from "../../services/runProcessService";
+import notificationService from "../../services/notificationService";
 
 // Leaflet icons (Vite/CRA) - giữ lại để Leaflet không lỗi asset
 import marker2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -24,6 +31,14 @@ function toYYYYMMDDLocal(d = new Date()) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function goalOncePerDayKey() {
+  return `goal-success-${toYYYYMMDDLocal()}`;
+}
+
+function getUserId() {
+  return localStorage.getItem("userId");
 }
 
 /* ---------------------- Map Helpers ---------------------- */
@@ -66,7 +81,9 @@ function RecenterButton({ center }) {
   return (
     <button
       type="button"
-      onClick={() => map.setView(center, map.getZoom() || 16, { animate: true })}
+      onClick={() =>
+        map.setView(center, map.getZoom() || 16, { animate: true })
+      }
       className="absolute bottom-24 right-4 z-[1200] grid h-11 w-11 place-items-center rounded-full bg-white/95 shadow-lg ring-1 ring-black/10 backdrop-blur active:scale-[0.98]"
       aria-label="Recenter"
       title="Recenter"
@@ -153,7 +170,12 @@ function StatCard({ icon, title, value, suffix, tone = "slate" }) {
   return (
     <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="flex items-center gap-2 text-sm font-semibold text-black/55">
-        <span className={["grid h-8 w-8 place-items-center rounded-xl", toneCls].join(" ")}>
+        <span
+          className={[
+            "grid h-8 w-8 place-items-center rounded-xl",
+            toneCls,
+          ].join(" ")}
+        >
           {icon}
         </span>
         <span>{title}</span>
@@ -162,7 +184,9 @@ function StatCard({ icon, title, value, suffix, tone = "slate" }) {
       <div className="mt-2 flex items-end gap-1">
         <div className="text-3xl font-extrabold text-black">{value}</div>
         {suffix ? (
-          <div className="pb-1 text-sm font-semibold text-black/70">{suffix}</div>
+          <div className="pb-1 text-sm font-semibold text-black/70">
+            {suffix}
+          </div>
         ) : null}
       </div>
     </div>
@@ -180,7 +204,9 @@ function DistanceCard({ distanceKm }) {
       </div>
 
       <div className="mt-4 flex items-end gap-2">
-        <div className="text-4xl font-extrabold text-black">{distanceKm.toFixed(2)}</div>
+        <div className="text-4xl font-extrabold text-black">
+          {distanceKm.toFixed(2)}
+        </div>
         <div className="pb-1 text-sm font-semibold text-black/60">km</div>
       </div>
     </div>
@@ -191,11 +217,15 @@ function TimeCard({ elapsedMs }) {
   return (
     <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="flex items-center gap-3 text-sm font-semibold text-black/55">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-black/5">🕒</span>
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-black/5">
+          🕒
+        </span>
         <span>Time</span>
       </div>
 
-      <div className="mt-4 text-4xl font-extrabold text-black tracking-wider">{formatTime(elapsedMs)}</div>
+      <div className="mt-4 text-4xl font-extrabold text-black tracking-wider">
+        {formatTime(elapsedMs)}
+      </div>
     </div>
   );
 }
@@ -210,7 +240,9 @@ function CongratsToast({ open, title, desc, onClose }) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-base font-extrabold text-black">{title}</div>
-              <div className="mt-1 text-sm font-semibold text-black/70">{desc}</div>
+              <div className="mt-1 text-sm font-semibold text-black/70">
+                {desc}
+              </div>
             </div>
             <button
               type="button"
@@ -270,7 +302,8 @@ function progressStyle(ratio) {
 }
 
 function GoalProgressBar({ totalDoneKm, targetKm, loading }) {
-  const ratio = targetKm > 0 ? Math.max(0, Math.min(1.5, totalDoneKm / targetKm)) : 0;
+  const ratio =
+    targetKm > 0 ? Math.max(0, Math.min(1.5, totalDoneKm / targetKm)) : 0;
   const pct = Math.min(100, Math.round(ratio * 100 * 10) / 10);
   const style = progressStyle(ratio);
 
@@ -280,11 +313,21 @@ function GoalProgressBar({ totalDoneKm, targetKm, loading }) {
         <div className="flex items-center justify-between">
           <div className="text-sm font-extrabold text-white">Today goal</div>
           <div className="text-xs font-semibold text-white/80">
-            {loading ? "Loading…" : `${totalDoneKm.toFixed(2)} / ${targetKm} km • ${Math.min(100, pct)}%`}
+            {loading
+              ? "Loading…"
+              : `${totalDoneKm.toFixed(2)} / ${targetKm} km • ${Math.min(
+                  100,
+                  pct,
+                )}%`}
           </div>
         </div>
 
-        <div className={["mt-2 h-2 w-full overflow-hidden rounded-full", style.track].join(" ")}>
+        <div
+          className={[
+            "mt-2 h-2 w-full overflow-hidden rounded-full",
+            style.track,
+          ].join(" ")}
+        >
           <div
             className={["h-full rounded-full", style.fillClass].join(" ")}
             style={{
@@ -294,7 +337,11 @@ function GoalProgressBar({ totalDoneKm, targetKm, loading }) {
           />
         </div>
 
-        <div className={["mt-1 text-[11px] font-semibold", style.labelClass].join(" ")}>
+        <div
+          className={["mt-1 text-[11px] font-semibold", style.labelClass].join(
+            " ",
+          )}
+        >
           {ratio >= 1 ? "🎉 You have completed today's goal" : style.label}
         </div>
       </div>
@@ -482,17 +529,20 @@ export default function OutdoorRun() {
       },
       (err) => {
         console.error(err);
-        alert("Không lấy được vị trí. Hãy bật Location và cho phép quyền truy cập.");
+        alert(
+          "Không lấy được vị trí. Hãy bật Location và cho phép quyền truy cập.",
+        );
       },
       {
         enableHighAccuracy: true,
         maximumAge: 500,
         timeout: 10000,
-      }
+      },
     );
 
     return () => {
-      if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);
+      if (watchIdRef.current != null)
+        navigator.geolocation.clearWatch(watchIdRef.current);
     };
   }, [isPaused, mode]);
 
@@ -510,9 +560,24 @@ export default function OutdoorRun() {
   // Congrats when completed (once)
   useEffect(() => {
     if (!completed) return;
-    if (didShowCongratsRef.current) return;
-    didShowCongratsRef.current = true;
+
+    const userId = getUserId();
+    if (!userId) return;
+
+    // ❌ đã gửi hôm nay rồi → không làm gì nữa
+    if (localStorage.getItem(goalOncePerDayKey())) return;
+
+    localStorage.setItem(goalOncePerDayKey(), "1");
+
     setShowCongrats(true);
+
+    // 🔔 LƯU NOTIFICATION (SUCCESS)
+    notificationService.createNotification({
+      userId,
+      title: "Hoàn thành mục tiêu hôm nay",
+      type: "success",
+      message: `Bạn đã hoàn thành ${targetKm} km hôm nay`,
+    });
 
     const t = setTimeout(() => setShowCongrats(false), 4000);
     return () => clearTimeout(t);
@@ -523,7 +588,10 @@ export default function OutdoorRun() {
     return [21.0587, 105.8105];
   }, [pos]);
 
-  const paceText = useMemo(() => formatPace(elapsedMs, distanceKm), [elapsedMs, distanceKm]);
+  const paceText = useMemo(
+    () => formatPace(elapsedMs, distanceKm),
+    [elapsedMs, distanceKm],
+  );
 
   // Flatten all points for fitBounds
   const allPoints = useMemo(() => segments.flat(), [segments]);
@@ -567,6 +635,13 @@ export default function OutdoorRun() {
 
       const res = await runProcessService.createRunProcess(payload);
 
+      await notificationService.createNotification({
+        userId: getUserId(),
+        title: "Hoàn thành buổi chạy",
+        type: "info",
+        message: `Bạn vừa chạy ${distanceKm.toFixed(2)} km`,
+      });
+
       if (!res?.success) {
         console.log("Save run failed:", res?.message);
         alert(res?.message || "Lưu run thất bại");
@@ -588,7 +663,8 @@ export default function OutdoorRun() {
   if (mode === "summary") {
     const calories = Math.max(0, Math.round(distanceKm * 60));
     const title = distanceKm > 0 ? "Great Run!" : "No Data";
-    const subtitle = distanceKm > 0 ? "Saved your run. Keep it up!" : "No distance recorded.";
+    const subtitle =
+      distanceKm > 0 ? "Saved your run. Keep it up!" : "No distance recorded.";
 
     return (
       <div className="min-h-screen bg-[#f3f1ee]">
@@ -602,16 +678,27 @@ export default function OutdoorRun() {
         <div className="mx-auto w-full max-w-[480px] px-4 pb-10 pt-6">
           <div className="rounded-3xl bg-[#aeead0] px-5 py-6 text-center shadow-sm">
             <div className="text-4xl">🎉</div>
-            <div className="mt-2 text-2xl font-extrabold text-black">{title}</div>
-            <div className="mt-1 text-sm font-semibold text-black/70">{subtitle}</div>
+            <div className="mt-2 text-2xl font-extrabold text-black">
+              {title}
+            </div>
+            <div className="mt-1 text-sm font-semibold text-black/70">
+              {subtitle}
+            </div>
           </div>
 
           <div className="mt-5 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/10">
             <div className="h-[220px] w-full">
-              <MapContainer center={center} zoom={15} className="h-full w-full" zoomControl={false}>
+              <MapContainer
+                center={center}
+                zoom={15}
+                className="h-full w-full"
+                zoomControl={false}
+              >
                 <MapAutoFix center={center} points={allPoints} />
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                {pos && <Marker position={[pos.lat, pos.lng]} icon={runnerIcon} />}
+                {pos && (
+                  <Marker position={[pos.lat, pos.lng]} icon={runnerIcon} />
+                )}
                 {polylinePositions.length > 0 && (
                   <Polyline
                     positions={polylinePositions}
@@ -623,17 +710,45 @@ export default function OutdoorRun() {
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <StatCard icon="⚡" title="Pace" value={paceText.replace("/km", "")} suffix="/km" tone="green" />
-            <StatCard icon="📍" title="Distance" value={distanceKm.toFixed(2)} suffix="km" tone="slate" />
-            <StatCard icon="🕒" title="Time" value={formatTime(elapsedMs)} suffix="" tone="slate" />
-            <StatCard icon="❤" title="Avg HR" value={`${avgHrFinal}`} suffix="bpm" tone="rose" />
+            <StatCard
+              icon="⚡"
+              title="Pace"
+              value={paceText.replace("/km", "")}
+              suffix="/km"
+              tone="green"
+            />
+            <StatCard
+              icon="📍"
+              title="Distance"
+              value={distanceKm.toFixed(2)}
+              suffix="km"
+              tone="slate"
+            />
+            <StatCard
+              icon="🕒"
+              title="Time"
+              value={formatTime(elapsedMs)}
+              suffix=""
+              tone="slate"
+            />
+            <StatCard
+              icon="❤"
+              title="Avg HR"
+              value={`${avgHrFinal}`}
+              suffix="bpm"
+              tone="rose"
+            />
           </div>
 
           <div className="mt-4 overflow-hidden rounded-3xl bg-gradient-to-r from-amber-400 to-orange-600 p-5 text-white shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-bold text-white/90">Calories Burned</div>
-                <div className="mt-1 text-3xl font-extrabold">{calories} kcal</div>
+                <div className="text-sm font-bold text-white/90">
+                  Calories Burned
+                </div>
+                <div className="mt-1 text-3xl font-extrabold">
+                  {calories} kcal
+                </div>
               </div>
               <div className="text-4xl">🔥</div>
             </div>
@@ -684,12 +799,18 @@ export default function OutdoorRun() {
           {/* Header row */}
           <div className="mx-auto flex w-full max-w-[460px] items-center justify-between">
             <div className="rounded-2xl bg-black/40 px-4 py-2 backdrop-blur-md ring-1 ring-white/15">
-              <div className="text-base font-semibold text-white">Outdoor Run</div>
+              <div className="text-base font-semibold text-white">
+                Outdoor Run
+              </div>
               <div className="mt-0.5 text-[11px] font-semibold text-white/70">
                 {pos ? (
                   <>
                     Accuracy {Math.round(pos.accuracy)}m •{" "}
-                    <span className={isPaused ? "text-amber-200" : "text-emerald-200"}>
+                    <span
+                      className={
+                        isPaused ? "text-amber-200" : "text-emerald-200"
+                      }
+                    >
                       {isPaused ? "Paused" : "Tracking"}
                     </span>
                   </>
@@ -718,7 +839,12 @@ export default function OutdoorRun() {
           />
         </div>
 
-        <MapContainer center={center} zoom={16} className="h-full w-full" zoomControl={false}>
+        <MapContainer
+          center={center}
+          zoom={16}
+          className="h-full w-full"
+          zoomControl={false}
+        >
           <MapAutoFix center={center} points={allPoints} />
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <RecenterButton center={center} />
@@ -743,8 +869,20 @@ export default function OutdoorRun() {
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <StatCard icon="⚡" title="Pace" value={paceText.replace("/km", "")} suffix="/km" tone="green" />
-            <StatCard icon="❤" title="Avg HR" value={`${avgHr}`} suffix="bpm" tone="rose" />
+            <StatCard
+              icon="⚡"
+              title="Pace"
+              value={paceText.replace("/km", "")}
+              suffix="/km"
+              tone="green"
+            />
+            <StatCard
+              icon="❤"
+              title="Avg HR"
+              value={`${avgHr}`}
+              suffix="bpm"
+              tone="rose"
+            />
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
@@ -768,7 +906,9 @@ export default function OutdoorRun() {
               <span
                 className={[
                   "inline-flex h-8 w-8 items-center justify-center rounded-xl",
-                  isPaused ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700",
+                  isPaused
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-amber-100 text-amber-700",
                 ].join(" ")}
               >
                 {isPaused ? "▶" : "⏸"}
@@ -785,7 +925,9 @@ export default function OutdoorRun() {
                 savingRun ? "bg-black/60" : "bg-[#111827]",
               ].join(" ")}
             >
-              <span className="relative z-10">{savingRun ? "Saving..." : "Finish"}</span>
+              <span className="relative z-10">
+                {savingRun ? "Saving..." : "Finish"}
+              </span>
               <span className="absolute inset-0 bg-gradient-to-r from-emerald-500/35 via-sky-500/25 to-transparent" />
             </button>
           </div>
