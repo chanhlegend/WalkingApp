@@ -19,7 +19,7 @@ const server = http.createServer(app); // ✅ tạo server
 
 // ✅ CORS chuẩn (dev/prod)
 const allowedOrigins = [
-  process.env.CLIENT_URL || "http://localhost:5173",
+  process.env.FRONTEND_URL || "http://localhost:5173",
   "http://localhost:5173",
 ];
 
