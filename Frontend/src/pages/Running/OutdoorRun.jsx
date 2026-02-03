@@ -37,7 +37,21 @@ function goalOncePerDayKey() {
   return `goal-success-${toYYYYMMDDLocal()}`;
 }
 
+/**
+ * ✅ FIX: Lấy userId đúng nguồn
+ * - Ưu tiên sessionStorage "user" (vì AuthedShellLayout đang dùng sessionStorage)
+ * - Fallback localStorage "userId"
+ */
 function getUserId() {
+  try {
+    const raw = sessionStorage.getItem("user");
+    if (raw) {
+      const u = JSON.parse(raw);
+      return u?._id || u?.id || null;
+    }
+  } catch {
+    // ignore
+  }
   return localStorage.getItem("userId");
 }
 
@@ -390,7 +404,6 @@ export default function OutdoorRun() {
 
   // Congrats toast
   const [showCongrats, setShowCongrats] = useState(false);
-  const didShowCongratsRef = useRef(false);
 
   // Save state
   const [savingRun, setSavingRun] = useState(false);
@@ -557,31 +570,60 @@ export default function OutdoorRun() {
     return () => clearInterval(id);
   }, []);
 
-  // Congrats when completed (once)
+  /**
+   * ✅ FIX: Goal completed -> luôn show toast
+   * - Lấy userId đúng
+   * - await createNotification + log lỗi
+   * - Nếu create fail => remove key để cho phép gửi lại
+   */
   useEffect(() => {
     if (!completed) return;
 
-    const userId = getUserId();
-    if (!userId) return;
+    let t = null;
+    (async () => {
+      const userId = getUserId();
 
-    // ❌ đã gửi hôm nay rồi → không làm gì nữa
-    if (localStorage.getItem(goalOncePerDayKey())) return;
+      if (!userId) {
+        console.log("[Goal] missing userId -> skip notification");
+        return;
+      }
 
-    localStorage.setItem(goalOncePerDayKey(), "1");
+      // Nếu đã gửi hôm nay thì bỏ qua
+      const k = goalOncePerDayKey();
+      if (localStorage.getItem(k)) {
+        console.log("[Goal] already notified today:", k);
+        return;
+      }
 
-    setShowCongrats(true);
+      // set key trước để tránh spam (optimistic)
+      localStorage.setItem(k, "1");
 
-    // 🔔 LƯU NOTIFICATION (SUCCESS)
-    notificationService.createNotification({
-      userId,
-      title: "Hoàn thành mục tiêu hôm nay",
-      type: "success",
-      message: `Bạn đã hoàn thành ${targetKm} km hôm nay`,
-    });
+      // show toast
+      setShowCongrats(true);
 
-    const t = setTimeout(() => setShowCongrats(false), 4000);
-    return () => clearTimeout(t);
-  }, [completed]);
+      // create notification
+      const r = await notificationService.createNotification({
+        // userId: userId, // ❗ thường backend sẽ lấy từ token (req.user.id). Không cần gửi.
+        title: "Hoàn thành mục tiêu hôm nay",
+        type: "success",
+        message: `Bạn đã hoàn thành ${targetKm} km hôm nay`,
+      });
+
+      if (!r?.success) {
+        console.log("[Goal] createNotification failed:", r?.message);
+        // cho phép gửi lại nếu fail
+        localStorage.removeItem(k);
+      } else {
+        console.log("[Goal] notification created:", r?.data?._id || r?.data);
+      }
+
+      t = setTimeout(() => setShowCongrats(false), 4000);
+    })();
+
+    return () => {
+      if (t) clearTimeout(t);
+    };
+  }, [completed, targetKm]);
 
   const center = useMemo(() => {
     if (pos) return [pos.lat, pos.lng];
@@ -635,12 +677,14 @@ export default function OutdoorRun() {
 
       const res = await runProcessService.createRunProcess(payload);
 
-      await notificationService.createNotification({
-        userId: getUserId(),
+      // ✅ tạo notification "finish"
+      const r = await notificationService.createNotification({
         title: "Hoàn thành buổi chạy",
         type: "info",
         message: `Bạn vừa chạy ${distanceKm.toFixed(2)} km`,
       });
+      if (!r?.success)
+        console.log("[Finish] createNotification failed:", r?.message);
 
       if (!res?.success) {
         console.log("Save run failed:", res?.message);
@@ -935,11 +979,6 @@ export default function OutdoorRun() {
           <div className="mt-4 text-center text-xs font-semibold text-black/45">
             Tip: Tap ⦿ to recenter the map to your current location
           </div>
-
-          {/* ✅ Note quan trọng đúng yêu cầu của bạn */}
-          {/* <div className="mt-2 text-center text-[11px] font-semibold text-black/40">
-            Pause will not delete the old green segment — Resume will start a new green segment from the current location.
-          </div> */}
         </div>
       </div>
     </div>
