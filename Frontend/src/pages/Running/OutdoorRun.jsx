@@ -33,28 +33,6 @@ function toYYYYMMDDLocal(d = new Date()) {
   return `${y}-${m}-${day}`;
 }
 
-function goalOncePerDayKey() {
-  return `goal-success-${toYYYYMMDDLocal()}`;
-}
-
-/**
- * ✅ FIX: Lấy userId đúng nguồn
- * - Ưu tiên sessionStorage "user" (vì AuthedShellLayout đang dùng sessionStorage)
- * - Fallback localStorage "userId"
- */
-function getUserId() {
-  try {
-    const raw = sessionStorage.getItem("user");
-    if (raw) {
-      const u = JSON.parse(raw);
-      return u?._id || u?.id || null;
-    }
-  } catch {
-    // ignore
-  }
-  return localStorage.getItem("userId");
-}
-
 /* ---------------------- Map Helpers ---------------------- */
 
 function MapAutoFix({ center, points }) {
@@ -416,6 +394,9 @@ export default function OutdoorRun() {
   const totalDoneKm = todayTotalKm + distanceKm;
   const completed = targetKm > 0 && totalDoneKm >= targetKm;
 
+  // ✅ NEW: chỉ bắn notification khi completed chuyển false -> true
+  const prevCompletedRef = useRef(false);
+
   // ✅ load target + today runs on mount
   useEffect(() => {
     let mounted = true;
@@ -571,48 +552,34 @@ export default function OutdoorRun() {
   }, []);
 
   /**
-   * ✅ FIX: Goal completed -> luôn show toast
-   * - Lấy userId đúng
-   * - await createNotification + log lỗi
-   * - Nếu create fail => remove key để cho phép gửi lại
+   * ✅ GOAL COMPLETE: bỏ giới hạn 1 lần/ngày
+   * - Chỉ bắn khi completed chuyển từ false -> true
+   * - Nếu bạn tăng target (completed=false) rồi đạt lại => vẫn bắn lại
    */
   useEffect(() => {
-    if (!completed) return;
+    if (!completed) {
+      prevCompletedRef.current = false; // reset trigger
+      return;
+    }
+
+    // nếu đã bắn trong trạng thái completed=true rồi thì không bắn lại
+    if (prevCompletedRef.current) return;
+    prevCompletedRef.current = true;
 
     let t = null;
     (async () => {
-      const userId = getUserId();
-
-      if (!userId) {
-        console.log("[Goal] missing userId -> skip notification");
-        return;
-      }
-
-      // Nếu đã gửi hôm nay thì bỏ qua
-      const k = goalOncePerDayKey();
-      if (localStorage.getItem(k)) {
-        console.log("[Goal] already notified today:", k);
-        return;
-      }
-
-      // set key trước để tránh spam (optimistic)
-      localStorage.setItem(k, "1");
-
       // show toast
       setShowCongrats(true);
 
-      // create notification
+      // lưu notification vào DB (BE lấy userId từ token)
       const r = await notificationService.createNotification({
-        // userId: userId, // ❗ thường backend sẽ lấy từ token (req.user.id). Không cần gửi.
         title: "Hoàn thành mục tiêu hôm nay",
         type: "success",
-        message: `Bạn đã hoàn thành ${targetKm} km hôm nay`,
+        message: `Bạn đã hoàn thành mục tiêu ${targetKm} km hôm nay`,
       });
 
       if (!r?.success) {
         console.log("[Goal] createNotification failed:", r?.message);
-        // cho phép gửi lại nếu fail
-        localStorage.removeItem(k);
       } else {
         console.log("[Goal] notification created:", r?.data?._id || r?.data);
       }
@@ -690,7 +657,6 @@ export default function OutdoorRun() {
         console.log("Save run failed:", res?.message);
         alert(res?.message || "Lưu run thất bại");
       } else {
-        console.log(res.data);
         setAvgHrFinal(res.data?.avg_heartRate || avgHr);
         setTodayTotalKm((v) => v + distanceKm);
       }
@@ -778,7 +744,7 @@ export default function OutdoorRun() {
             <StatCard
               icon="❤"
               title="Avg HR"
-              value={`${avgHrFinal}`}
+              value={`${avgHrFinal ?? avgHr}`}
               suffix="bpm"
               tone="rose"
             />
