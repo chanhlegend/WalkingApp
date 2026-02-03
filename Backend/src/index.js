@@ -1,63 +1,90 @@
-const dotenv = require('dotenv');
+// src/index.js
+const dotenv = require("dotenv");
 // Load biến môi trường ngay lập tức
 dotenv.config();
 
-const express = require('express');
-const morgan = require('morgan');
-const methodOverride = require('method-override');
+const express = require("express");
+const http = require("http");
+const morgan = require("morgan");
+const methodOverride = require("method-override");
+const cors = require("cors");
+
+const route = require("./routes");
+const db = require("./config/db");
+
+const { initSocket } = require("./app/socket"); // ✅ đúng path theo cấu trúc bạn đưa
+
 const app = express();
-const route = require('./routes');
-const db = require('./config/db');
-const cors = require('cors');
+const server = http.createServer(app); // ✅ tạo server
 
-async function bootstrap() {
-  // Kết nối DB
-  try {
-    await db.connect();
-  } catch (error) {
-    console.error('MongoDB connection failed. Server will not start.');
-    process.exit(1);
-  }
+// ✅ CORS chuẩn (dev/prod)
+const allowedOrigins = [
+  process.env.CLIENT_URL || "http://localhost:5173",
+  "http://localhost:5173",
+];
 
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // Cho phép request không có origin (Postman, server-to-server)
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 
-// Middleware
-app.use(cors());
+// Middleware parse body
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(methodOverride('_method'));
-app.use(morgan('combined'));
+app.use(methodOverride("_method"));
+app.use(morgan("combined"));
 
 // session
-const sessionMiddleware = require('./config/session/session');
+const sessionMiddleware = require("./config/session/session");
 app.use(sessionMiddleware);
 app.use((req, res, next) => {
   res.locals.session = req.session;
   next();
 });
 
-//mailer
-const mailer = require('./config/mailer/mailer');
-app.set('transporter', mailer);
+// mailer
+const mailer = require("./config/mailer/mailer");
+app.set("transporter", mailer);
 
 // Passport
-const passport = require('./config/passport/passport-config');
+const passport = require("./config/passport/passport-config");
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Khởi tạo routes
-route(app);
+// ✅ init socket sau khi có session/passport nếu bạn muốn dùng sau này
+initSocket(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+  },
+});
+
+async function bootstrap() {
+  // Kết nối DB
+  try {
+    await db.connect();
+  } catch (error) {
+    console.error("MongoDB connection failed. Server will not start.");
+    process.exit(1);
+  }
+
+  // Khởi tạo routes
+  route(app);
 
   // Port
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, '0.0.0.0', () => {
+
+  // ✅ dùng server.listen thay vì app.listen
+  server.listen(PORT, "0.0.0.0", () => {
     console.log(`Ứng dụng đang chạy trên cổng ${PORT}`);
   });
 }
 
 bootstrap();
-
-// Cấu hình CORS
-// app.use(cors({
-//     origin: 'http://localhost:5173',
-//     credentials: true
-// }));
